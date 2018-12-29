@@ -20,8 +20,10 @@ func main() {
 	if len(os.Args)-1 == 1 {
 		configPath = os.Args[1]
 	} else {
-		configPath = "./configs/miner1.json"
+		configPath = "./miner/configs/miner1.json"
 	}
+
+	log.Printf("Using configs at: %s", configPath)
 
 	rawConfig, fileerr := ioutil.ReadFile(configPath)
 	if fileerr != nil {
