@@ -1,9 +1,10 @@
 package op
 
 import (
-	"cs416/P1-v3d0b-q4d0b/bclib"
 	"log"
 	"time"
+
+	"github.com/omzmarlon/blockfs/bclib"
 )
 
 // ********************* PUBLIC *********************

@@ -1,9 +1,10 @@
 package chain
 
 import (
-	"cs416/P1-v3d0b-q4d0b/bclib"
 	"log"
 	"sync"
+
+	"github.com/omzmarlon/blockfs/bclib"
 )
 
 var opSalary int

@@ -1,12 +1,13 @@
 package flooding
 
 import (
-	"cs416/P1-v3d0b-q4d0b/bclib"
-	"cs416/P1-v3d0b-q4d0b/fdlib"
 	"io"
 	"log"
 	"net"
 	"time"
+
+	"github.com/omzmarlon/blockfs/bclib"
+	"github.com/omzmarlon/blockfs/fdlib"
 )
 
 func (flooder *Flooder) minerFailureDetectionDaemon(notifyCh <-chan fdlib.FailureDetected) {

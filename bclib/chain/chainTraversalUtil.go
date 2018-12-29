@@ -1,11 +1,12 @@
 package chain
 
 import (
-	"cs416/P1-v3d0b-q4d0b/bclib"
 	"errors"
 	"fmt"
 	"log"
 	"strconv"
+
+	"github.com/omzmarlon/blockfs/bclib"
 )
 
 type bfsObject struct {

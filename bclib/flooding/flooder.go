@@ -1,14 +1,15 @@
 package flooding
 
 import (
-	"cs416/P1-v3d0b-q4d0b/bclib"
-	"cs416/P1-v3d0b-q4d0b/bclib/chain"
-	"cs416/P1-v3d0b-q4d0b/fdlib"
 	"log"
 	"math/rand"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/omzmarlon/blockfs/bclib"
+	"github.com/omzmarlon/blockfs/bclib/chain"
+	"github.com/omzmarlon/blockfs/fdlib"
 )
 
 func (flooder *Flooder) GetFloodingOpsInputChann() chan<- bclib.ROp {

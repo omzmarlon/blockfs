@@ -1,10 +1,6 @@
 package reqhandler
 
 import (
-	"cs416/P1-v3d0b-q4d0b/bclib"
-	"cs416/P1-v3d0b-q4d0b/bclib/chain"
-	"cs416/P1-v3d0b-q4d0b/bclib/flooding"
-	"cs416/P1-v3d0b-q4d0b/bclib/op"
 	"errors"
 	"fmt"
 	"net"
@@ -12,6 +8,11 @@ import (
 	"net/rpc"
 	"strconv"
 	"sync"
+
+	"github.com/omzmarlon/blockfs/bclib"
+	"github.com/omzmarlon/blockfs/bclib/chain"
+	"github.com/omzmarlon/blockfs/bclib/flooding"
+	"github.com/omzmarlon/blockfs/bclib/op"
 )
 
 type Record [512]byte

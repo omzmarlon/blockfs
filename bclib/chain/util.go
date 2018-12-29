@@ -2,9 +2,10 @@ package chain
 
 import (
 	"crypto/md5"
-	"cs416/P1-v3d0b-q4d0b/bclib"
 	"encoding/hex"
 	"fmt"
+
+	"github.com/omzmarlon/blockfs/bclib"
 )
 
 // ComputeHashString - static function to compute hash of given input

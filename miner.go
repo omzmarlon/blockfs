@@ -1,16 +1,17 @@
 package main
 
 import (
-	"cs416/P1-v3d0b-q4d0b/bclib"
-	"cs416/P1-v3d0b-q4d0b/bclib/chain"
-	"cs416/P1-v3d0b-q4d0b/bclib/chain/generation"
-	"cs416/P1-v3d0b-q4d0b/bclib/flooding"
-	"cs416/P1-v3d0b-q4d0b/bclib/op"
-	"cs416/P1-v3d0b-q4d0b/bclib/reqhandler"
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/omzmarlon/blockfs/bclib"
+	"github.com/omzmarlon/blockfs/bclib/chain"
+	"github.com/omzmarlon/blockfs/bclib/chain/generation"
+	"github.com/omzmarlon/blockfs/bclib/flooding"
+	"github.com/omzmarlon/blockfs/bclib/op"
+	"github.com/omzmarlon/blockfs/bclib/reqhandler"
 )
 
 func main() {
