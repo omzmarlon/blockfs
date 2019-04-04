@@ -1,5 +1,5 @@
 # BlockFS
-A Record File System built on top of Block Chain
+A distributed record file fystem built on top of blockchain
 
 
 
