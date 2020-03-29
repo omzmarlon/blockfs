@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/omzmarlon/blockfs/bclib"
-	"github.com/omzmarlon/blockfs/bclib/chain"
-	"github.com/omzmarlon/blockfs/bclib/flooding"
-	"github.com/omzmarlon/blockfs/bclib/op"
+	"github.com/omzmarlon/blockfs/pkg/bclib"
+	"github.com/omzmarlon/blockfs/pkg/bclib/chain"
+	"github.com/omzmarlon/blockfs/pkg/bclib/flooding"
+	"github.com/omzmarlon/blockfs/pkg/bclib/op"
 )
 
 type Record [512]byte

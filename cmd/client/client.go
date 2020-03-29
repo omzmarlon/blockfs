@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/omzmarlon/blockfs/rfslib"
+	"github.com/omzmarlon/blockfs/pkg/rfslib"
 )
 
 var (

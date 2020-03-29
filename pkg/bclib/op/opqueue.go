@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/omzmarlon/blockfs/bclib"
+	"github.com/omzmarlon/blockfs/pkg/bclib"
 )
 
 // ********************* PUBLIC *********************

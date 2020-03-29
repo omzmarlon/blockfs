@@ -6,12 +6,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/omzmarlon/blockfs/bclib"
-	"github.com/omzmarlon/blockfs/bclib/chain"
-	"github.com/omzmarlon/blockfs/bclib/chain/generation"
-	"github.com/omzmarlon/blockfs/bclib/flooding"
-	"github.com/omzmarlon/blockfs/bclib/op"
-	"github.com/omzmarlon/blockfs/bclib/reqhandler"
+	"github.com/omzmarlon/blockfs/pkg/bclib"
+	"github.com/omzmarlon/blockfs/pkg/bclib/chain"
+	"github.com/omzmarlon/blockfs/pkg/bclib/chain/generation"
+	"github.com/omzmarlon/blockfs/pkg/bclib/flooding"
+	"github.com/omzmarlon/blockfs/pkg/bclib/op"
+	"github.com/omzmarlon/blockfs/pkg/bclib/reqhandler"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/omzmarlon/blockfs/bclib"
+	"github.com/omzmarlon/blockfs/pkg/bclib"
 )
 
 var opSalary int

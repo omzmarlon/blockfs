@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/omzmarlon/blockfs/bclib"
+	"github.com/omzmarlon/blockfs/pkg/bclib"
 )
 
 // ComputeHashString - static function to compute hash of given input

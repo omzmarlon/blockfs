@@ -1,13 +1,3 @@
-/*
-
-This package specifies the application's interface to the distributed
-records system (RFS) to be used in project 1 of UBC CS 416 2018W1.
-
-You are not allowed to change this API, but you do have to implement
-it.
-
-*/
-
 package rfslib
 
 import (

@@ -6,7 +6,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/omzmarlon/blockfs/bclib"
+	"github.com/omzmarlon/blockfs/pkg/bclib"
 )
 
 type bfsObject struct {

@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/omzmarlon/blockfs/bclib"
-	"github.com/omzmarlon/blockfs/bclib/chain"
-	"github.com/omzmarlon/blockfs/bclib/flooding"
+	"github.com/omzmarlon/blockfs/pkg/bclib"
+	"github.com/omzmarlon/blockfs/pkg/bclib/chain"
+	"github.com/omzmarlon/blockfs/pkg/bclib/flooding"
 )
 
 // ********************* PUBLIC *********************

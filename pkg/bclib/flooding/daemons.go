@@ -6,8 +6,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/omzmarlon/blockfs/bclib"
-	"github.com/omzmarlon/blockfs/fdlib"
+	"github.com/omzmarlon/blockfs/pkg/bclib"
+	"github.com/omzmarlon/blockfs/pkg/fdlib"
 )
 
 func (flooder *Flooder) minerFailureDetectionDaemon(notifyCh <-chan fdlib.FailureDetected) {
