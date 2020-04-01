@@ -1,4 +1,6 @@
 # BlockFS
+*WIP*
+
 A distributed record file system built on top of blockchain
 
 

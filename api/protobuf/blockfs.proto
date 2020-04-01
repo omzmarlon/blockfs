@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package protobuf;
+
+import "google/rpc/status.proto";
+
+option go_package = "pkg/api";
+
+
+message Record {
+    bytes bytes = 1;
+}
+
+message CreateFileRequest {
+    string file_name = 1;
+}
+
+message CreateFileResponse {
+    google.rpc.Status status = 1;
+}
+
+message ListFilesRequest {}
+
+message ListFilesResponse {
+    google.rpc.Status status = 1;
+    repeated string file_names = 2;
+}
+
+message TotalRecsRequest {
+    string file_name = 1;
+}
+
+message TotalRecsResponse {
+    google.rpc.Status status = 1;
+    uint32 num_recs = 2;
+}
+
+message ReadRecRequest {
+    string file_name = 1;
+    uint32 record_num = 2;
+}
+
+message ReadRecResponse {
+    google.rpc.Status status = 1;
+    Record record = 2;
+}
+
+message AppendRecRequest {
+    string file_name = 1;
+    Record record = 2;
+}
+
+message AppendRecResponse {
+    google.rpc.Status status = 1;
+    uint32 record_num = 2;
+}
+
+// service for client and miner communication
+service BlockFS {
+    rpc CreateFile (CreateFileRequest) returns (CreateFileResponse) {}
+    rpc ListFiles (ListFilesRequest) returns (ListFilesResponse) {}
+    rpc TotalRecs (TotalRecsRequest) returns (TotalRecsResponse) {}
+    rpc ReadRec (ReadRecRequest) returns (ReadRecResponse) {}
+    rpc AppendRec (AppendRecRequest) returns (AppendRecResponse) {}
+}

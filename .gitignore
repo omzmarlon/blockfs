@@ -1,0 +1,4 @@
+vendor/
+build/
+third_party/protobuf
+pkg/api/*.pb.go

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package protobuf;
+
+option go_package = "pkg/api";
+
+message Block {
+    string hash = 1;
+    string prevHash = 2;
+    string minerId = 3;
+    repeated Op ops = 4;
+    uint32 nounce = 5;
+    repeated Block children = 6;
+}
+
+message Op {
+    string op_id = 1;
+    string miner_id = 2;
+    OpAction op_action = 3;
+    string file_name = 4;
+    bytes bytes = 5;
+
+    enum OpAction {
+        UNKNOWN = 0;
+        CREATE = 1;
+        APPEND = 2;
+    }
+}
+
+message FloodBlockRequest {
+    string request_id = 1;
+    repeated string previous_receivers = 2;
+    Block block = 3;
+}
+
+message FloodChainRequest {
+    string request_id = 1;
+    repeated string previous_receivers = 2;
+    Block chain = 3;
+}
+
+message FloodOpRequest {
+    string request_id = 1;
+    repeated string previous_receivers = 2;
+    Op op = 3;
+}
+
+message FloodResponse {}
+
+// service for miner peer communication
+service Peer {
+    rpc FloodBlock (stream FloodBlockRequest) returns (stream FloodResponse) {}
+    rpc FloodChain (stream FloodChainRequest) returns (stream FloodResponse) {}
+    rpc FloodOp (stream FloodOpRequest) returns (stream FloodResponse) {}
+}
