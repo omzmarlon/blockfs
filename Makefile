@@ -15,7 +15,7 @@ build: build-miner build-client
 
 build-client: proto-gen
 	go mod vendor
-	go build -o build/main cmd/client/client.go
+	go build -o build/client cmd/client/client.go
 
 build-miner: proto-gen
 	go mod vendor

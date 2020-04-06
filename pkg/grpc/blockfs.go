@@ -12,7 +12,7 @@ import (
 // TODO:
 // - actual implentation of the blockfs service
 
-// BlockFS is the grpc server for service the block file system
+// blockfs is the grpc server for service the block file system
 type blockfs struct {
 }
 

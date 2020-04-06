@@ -8,20 +8,21 @@ type Block struct {
 	Hash     string
 	PrevHash string
 	MinerID  string
-	Ops      []Op
+	Ops      *[]Op
 	Nonce    uint32
-	Children []Block
+	Children *[]Block
 }
 
 // NewBlock constructor
-func NewBlock(hash string, prevHash string, minerID string, ops []Op, nonce uint32) Block {
+func NewBlock(hash string, prevHash string, minerID string, ops *[]Op, nonce uint32) Block {
+	children := make([]Block, 0)
 	return Block{
 		Hash:     hash,
 		PrevHash: prevHash,
 		MinerID:  minerID,
 		Ops:      ops,
 		Nonce:    nonce,
-		Children: []Block{},
+		Children: &children,
 	}
 }
 
@@ -52,6 +53,7 @@ func NewOp(opID string, minerID string, opAction OpAction, filename string, reco
 type OpAction int
 
 const (
-	CREATE OpAction = 0
-	APPEND OpAction = 1
+	OpUNKNOWN OpAction = 0
+	OpCREATE  OpAction = 1
+	OpAPPEND  OpAction = 2
 )
