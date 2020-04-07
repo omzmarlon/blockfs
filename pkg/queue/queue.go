@@ -16,7 +16,7 @@ type Queues struct {
 	blockchain *blockchain.Blockchain
 	// use channel type for below queues to ensure non-blocking operations
 	OpsQueue        chan domain.Op     // queue for Ops sent from client and other miner peer
-	blocksQueue     chan *domain.Block // queue for blocks generated and sent from other miner peer
+	BlocksQueue     chan *domain.Block // queue for blocks generated and sent from other miner peer
 	retryBlockQueue chan *domain.Block // in case if newer blocks get received before older blocks
 }
 
@@ -37,7 +37,7 @@ func StartQueueDaemons(conf Conf, blockchain *blockchain.Blockchain) *Queues {
 		conf:            conf,
 		blockchain:      blockchain,
 		OpsQueue:        make(chan domain.Op, conf.MaxOpsQueueSize),
-		blocksQueue:     make(chan *domain.Block, conf.BlockQueueSize),
+		BlocksQueue:     make(chan *domain.Block, conf.BlockQueueSize),
 		retryBlockQueue: make(chan *domain.Block, conf.RetryBlockQueueMaxSize),
 	}
 
@@ -49,16 +49,31 @@ func StartQueueDaemons(conf Conf, blockchain *blockchain.Blockchain) *Queues {
 
 func (queues *Queues) blockProcessorDaemon() {
 	for {
-		// TODO
-		if len(queues.blocksQueue) != 0 {
-			// append to blockchain, react based on result code
-			// maybe I can try to append asyncly so that they all get processed at once
-			// the async function can check if it were successful, depends of the result, send the block to retry queue
-			log.Printf("Got block: %+v", <-queues.blocksQueue)
+		if len(queues.BlocksQueue) != 0 {
+			block := <-queues.BlocksQueue
+			log.Printf("Got block: %+v", block)
+			go queues.processBlockHelper(block)
 		}
 		if len(queues.retryBlockQueue) != 0 {
-
+			block := <-queues.retryBlockQueue
+			go queues.processBlockHelper(block)
 		}
+	}
+}
+
+func (queues *Queues) processBlockHelper(block *domain.Block) {
+	result := queues.blockchain.AppendBlock(block)
+	switch result {
+	case blockchain.APPEND_RESULT_SUCCESS:
+		log.Println("Block appended successfully")
+	case blockchain.APPEND_RESULT_NOT_FOUND:
+		queues.retryBlockQueue <- block
+	case blockchain.APPEND_RESULT_INVALID_BLOCK:
+		log.Println("Append failed due to invalid block")
+		// TODO: may need to get back to client?
+	case blockchain.APPEND_RESULT_INVALID_SEMANTIC:
+		log.Println("Append failed due to invalid semantics")
+		// TODO: may need to get back to client?
 	}
 }
 
@@ -79,7 +94,7 @@ func (queues *Queues) opProcessorDaemon() {
 				ops[i] = <-queues.OpsQueue
 			}
 			log.Println("Time out for Ops reached, starting block generation...")
-			queues.blocksQueue <- gen.GenerateBlock(queues.blockchain.GetBlockHash(),
+			queues.BlocksQueue <- gen.GenerateBlock(queues.blockchain.GetBlockHash(),
 				queues.blockchain.Conf.MinerID, &ops, queues.blockchain.Conf.OpDiffculty,
 				queues.blockchain.Conf.NoopDifficulty)
 			restartTimer = true
@@ -91,7 +106,7 @@ func (queues *Queues) opProcessorDaemon() {
 				ops[i] = <-queues.OpsQueue
 			}
 			log.Println("Max queue size for Ops reached, starting block generation...")
-			queues.blocksQueue <- gen.GenerateBlock(queues.blockchain.GetBlockHash(),
+			queues.BlocksQueue <- gen.GenerateBlock(queues.blockchain.GetBlockHash(),
 				queues.blockchain.Conf.MinerID, &ops, queues.blockchain.Conf.OpDiffculty,
 				queues.blockchain.Conf.NoopDifficulty)
 			restartTimer = true

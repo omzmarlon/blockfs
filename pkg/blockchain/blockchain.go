@@ -32,7 +32,17 @@ type Conf struct {
 	NoopDifficulty uint8
 }
 
-// InitBlockchain - initialize the blockchain
+// AppendBlockResult - result code for trying to append new block to blockchain
+type AppendBlockResult int
+
+const (
+	APPEND_RESULT_SUCCESS          AppendBlockResult = 0
+	APPEND_RESULT_NOT_FOUND        AppendBlockResult = 1
+	APPEND_RESULT_INVALID_BLOCK    AppendBlockResult = 2
+	APPEND_RESULT_INVALID_SEMANTIC AppendBlockResult = 3
+)
+
+// New - initialize the blockchain
 func New(conf Conf) *Blockchain {
 	ops := make([]domain.Op, 0)
 	children := make([]domain.Block, 0)
@@ -52,13 +62,15 @@ func New(conf Conf) *Blockchain {
 	return ret
 }
 
-func (blockchain *Blockchain) AppendBlock(block domain.Block) {
+// AppendBlock appends a new block to the blockchain
+func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult {
 	// TODO
 
 	// verify
 	// find the place to append
 	// blockfs semantic check
 	// return codes for: success, could not find prev block, invalid block
+	return APPEND_RESULT_SUCCESS
 }
 
 // GetBlockHash returns the hash of the last block on the longest chain
