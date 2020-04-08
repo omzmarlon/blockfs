@@ -5,8 +5,10 @@ import (
 	"net"
 
 	"github.com/omzmarlon/blockfs/pkg/blockchain"
+	"github.com/omzmarlon/blockfs/pkg/coordinator"
+	"github.com/omzmarlon/blockfs/pkg/domain"
+	"github.com/omzmarlon/blockfs/pkg/flooder"
 	rpc "github.com/omzmarlon/blockfs/pkg/grpc"
-	"github.com/omzmarlon/blockfs/pkg/queue"
 	grpc "google.golang.org/grpc"
 )
 
@@ -24,24 +26,47 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	// start internal services...
-	blockchain := blockchain.New(blockchain.Conf{
+	// config values
+	minerID := "123"
+	blocksProcessingBufferSize := 100
+	opsProcessingBufferSize := 100
+	opFloodingBufferSize := 100
+	blockFloodingBufferSize := 100
+
+	// communication channels among processes
+	blocksProcessing := make(chan *domain.Block, blocksProcessingBufferSize)
+	opsProcessing := make(chan *domain.Op, opsProcessingBufferSize)
+	blocksFlooding := make(chan *domain.Block, blockFloodingBufferSize)
+	opsFlooding := make(chan *domain.Op, opFloodingBufferSize)
+
+	// start internal processes
+	bc := blockchain.New(blockchain.Conf{
 		GenesisHash:    "abc",
-		MinerID:        "123",
+		MinerID:        minerID,
 		OpDiffculty:    2,
 		NoopDifficulty: 4,
 	})
-	queue.StartQueueDaemons(queue.Conf{
+
+	flooder := flooder.New(flooder.Conf{
+		MinerID:                   minerID,
+		Port:                      8080,
+		PeerOpsFloodBufferSize:    100,
+		PeerBlocksFloodBufferSize: 100,
+		HeatbeatRetryMax:          3,
+		Peers:                     make(map[string]string),
+	}, bc)
+	flooder.StartFlooderDaemons(blocksProcessing, opsProcessing, blocksFlooding, opsFlooding)
+
+	coordinator := coordinator.New(coordinator.Conf{
 		MaxOpsQueueSize:        5,
 		RetryBlockQueueMaxSize: 100,
-		WaitOpsTimeoutMilli:    2000,
-		BlockQueueSize:         100,
-	}, blockchain)
+		WaitOpsTimeoutMilli:    1500,
+	}, bc)
+	coordinator.StartCoordinatorDaemons(blocksProcessing, opsProcessing, blocksFlooding)
 
 	// Creates a new gRPC server
 	log.Println("Starting BlockFS rpc service... ")
 	s := grpc.NewServer()
 	rpc.RegisterBlockFS(s)
 	s.Serve(lis)
-
 }

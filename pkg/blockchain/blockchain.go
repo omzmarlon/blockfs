@@ -40,6 +40,7 @@ const (
 	APPEND_RESULT_NOT_FOUND        AppendBlockResult = 1
 	APPEND_RESULT_INVALID_BLOCK    AppendBlockResult = 2
 	APPEND_RESULT_INVALID_SEMANTIC AppendBlockResult = 3
+	APPEND_RESULT_DUPLICATE        AppendBlockResult = 4
 )
 
 // New - initialize the blockchain
@@ -66,7 +67,7 @@ func New(conf Conf) *Blockchain {
 func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult {
 	// TODO
 
-	// verify
+	// verify, hash, difficulty, semantics, and children if present
 	// find the place to append
 	// blockfs semantic check
 	// return codes for: success, could not find prev block, invalid block

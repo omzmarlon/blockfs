@@ -47,9 +47,19 @@ message FloodOpRequest {
 
 message FloodResponse {}
 
+message HeartBeatRequest {
+    string fromMiner = 1;
+    string toMiner = 2;
+}
+message HeartBeatResponse {
+    string fromMiner = 1;
+    string toMiner = 2;
+}
+
 // service for miner peer communication
 service Peer {
-    rpc FloodBlock (stream FloodBlockRequest) returns (stream FloodResponse) {}
-    rpc FloodChain (stream FloodChainRequest) returns (stream FloodResponse) {}
-    rpc FloodOp (stream FloodOpRequest) returns (stream FloodResponse) {}
+    rpc FloodBlock (FloodBlockRequest) returns (FloodResponse) {}
+    rpc FloodChain (FloodChainRequest) returns (FloodResponse) {}
+    rpc FloodOp (FloodOpRequest) returns (FloodResponse) {}
+    rpc HeartBeat(HeartBeatRequest) returns (HeartBeatResponse) {}
 }

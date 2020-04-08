@@ -1,66 +1,51 @@
 package grpc
 
 import (
-	"io"
+	"context"
 
 	"github.com/omzmarlon/blockfs/pkg/api"
-	pb "github.com/omzmarlon/blockfs/pkg/api"
-	"github.com/omzmarlon/blockfs/pkg/util"
 	"google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-// TODO
-// - grpc service miner peer to peer communication
-
-// grpc service for receiving flooded blocks, ops, and chains
-type peer struct {
-	T int
+// Peer is grpc service for receiving flooded blocks, ops, and chains
+type Peer struct {
+	blocksBuffer chan<- api.FloodBlockRequest // channel to off-load blocks to when received peer flood
+	opsBuffer    chan<- api.FloodOpRequest    // channel to off-load ops to when received peer flood
 }
 
-func (*peer) FloodBlock(stream api.Peer_FloodBlockServer) error {
-	for {
-		floodBlockReq, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		// TODO process received block
-		grpcBlock := floodBlockReq.GetBlock()
-		util.GrpcBlockToDomainBlock(*grpcBlock)
-		// block := util.GrpcBlockToDomainBlock(*grpcBlock)
-		if err := stream.Send(&pb.FloodResponse{}); err != nil {
-			return err
-		}
-	}
+// FloodBlock - processes blocks flooded from peers
+func (peer *Peer) FloodBlock(ctx context.Context, request *api.FloodBlockRequest) (*api.FloodResponse, error) {
+	peer.blocksBuffer <- *request
+	return &api.FloodResponse{}, nil
 }
-func (*peer) FloodChain(srv api.Peer_FloodChainServer) error {
+
+// FloodChain - processes chains flooded from peers
+func (peer *Peer) FloodChain(ctx context.Context, request *api.FloodChainRequest) (*api.FloodResponse, error) {
 	// TODO
-	return status.Errorf(codes.Unimplemented, "method FloodOp not implemented")
+	// I'm thinking that all the channels for buffering can be reused
+	// i.e. I can just reuse the block channels for blockchains
+	// it's just that when merging with local blockchain it will be different (the difference is only in blockchain.go)
+	return nil, nil
 }
-func (*peer) FloodOp(stream api.Peer_FloodOpServer) error {
-	for {
-		floodOpReq, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		// TODO process op
-		floodOpReq.GetOp()
-		// grpcOp := floodOpReq.GetOp()
 
-		if err := stream.Send(&pb.FloodResponse{}); err != nil {
-			return err
-		}
-	}
+// FloodOp - processes ops flooded from peers
+func (peer *Peer) FloodOp(ctx context.Context, request *api.FloodOpRequest) (*api.FloodResponse, error) {
+	peer.opsBuffer <- *request
+	return &api.FloodResponse{}, nil
+}
+
+// HeartBeat - return heartbeat response to confirm liveness
+func (peer *Peer) HeartBeat(ctx context.Context, req *api.HeartBeatRequest) (*api.HeartBeatResponse, error) {
+	return &api.HeartBeatResponse{
+		FromMiner: req.FromMiner,
+		ToMiner:   req.ToMiner,
+	}, nil
 }
 
 // RegisterMiner - registers miner peer grpc
-func RegisterMiner(s *grpc.Server) {
-	pb.RegisterPeerServer(s, &peer{})
+func RegisterMiner(s *grpc.Server, blocks chan<- api.FloodBlockRequest, ops chan<- api.FloodOpRequest) {
+	api.RegisterPeerServer(s, &Peer{
+		blocksBuffer: blocks,
+		opsBuffer:    ops,
+	})
 }
