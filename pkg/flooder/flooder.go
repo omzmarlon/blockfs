@@ -73,6 +73,7 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 	go func() {
 		for {
 			block := <-blockFloodingBuffer
+			log.Println("Got a block to flood to peers")
 			grpcBlock := util.DomainBlockToGrpcBlock(*block)
 			floodReq := &api.FloodBlockRequest{
 				RequestId:         guuid.New().String(),
@@ -88,6 +89,7 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 	go func() {
 		for {
 			op := <-opsFloodingBuffer
+			log.Println("Got an op to flood to peers")
 			grpcOp := util.DomainOpToGrpcOp(*op)
 			floodReq := &api.FloodOpRequest{
 				RequestId:         guuid.New().String(),
@@ -103,6 +105,7 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 	go func() {
 		for {
 			peerFloodReq := <-blocksReqFloodBuffer
+			log.Println("Received a block from peers")
 			domainBlock := util.GrpcBlockToDomainBlock(*peerFloodReq.GetBlock())
 			blockProcessing <- &domainBlock
 			for peerID, peer := range flooder.peers {
@@ -113,7 +116,13 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 					}
 				}
 				if !inPrevList {
-					sendFloodBlockRequestHelper(peer, &peerFloodReq)
+					newReceivers := append(peerFloodReq.GetPreviousReceivers(), flooder.conf.MinerID)
+					newReq := &api.FloodBlockRequest{
+						RequestId:         peerFloodReq.GetRequestId(),
+						PreviousReceivers: newReceivers,
+						Block:             peerFloodReq.GetBlock(),
+					}
+					sendFloodBlockRequestHelper(peer, newReq)
 				}
 			}
 		}
@@ -122,6 +131,7 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 	go func() {
 		for {
 			peerFloodReq := <-opsReqFloodBuffer
+			log.Println("Received an op from peers")
 			domainOp := util.GrpcOpToDomainOp(*peerFloodReq.GetOp())
 			opsProcessing <- &domainOp
 			for peerID, peer := range flooder.peers {
@@ -132,7 +142,13 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 					}
 				}
 				if !inPrevList {
-					sendFloodOpRequestHelper(peer, &peerFloodReq)
+					newReceivers := append(peerFloodReq.GetPreviousReceivers(), flooder.conf.MinerID)
+					newReq := &api.FloodOpRequest{
+						RequestId:         peerFloodReq.GetRequestId(),
+						PreviousReceivers: newReceivers,
+						Op:                peerFloodReq.GetOp(),
+					}
+					sendFloodOpRequestHelper(peer, newReq)
 				}
 			}
 		}
