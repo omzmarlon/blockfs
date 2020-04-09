@@ -10,7 +10,7 @@ import (
 
 // GenerateBlock generates a new block satisfying provided difficulty
 func GenerateBlock(prevHash string, minerID string, ops *[]domain.Op,
-	opDifficulty uint8, noopDifficulty uint8) *domain.Block {
+	opDifficulty int, noopDifficulty int) *domain.Block {
 	log.Printf("Generating the a new block...")
 	start := time.Now().Unix()
 	children := make([]domain.Block, 0)
@@ -23,7 +23,7 @@ func GenerateBlock(prevHash string, minerID string, ops *[]domain.Op,
 		Children: &children,
 	}
 
-	var difficulty uint8
+	var difficulty int
 	if len(*ops) == 0 {
 		difficulty = noopDifficulty
 	} else {

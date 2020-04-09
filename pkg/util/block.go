@@ -18,7 +18,7 @@ func ComputeBlockHash(block domain.Block) string {
 }
 
 // TODO: test this
-func IsDifficultyReached(hash string, difficulty uint8) bool {
+func IsDifficultyReached(hash string, difficulty int) bool {
 	if hash[len(hash)-int(difficulty):] == targetZeros(difficulty) {
 		return true
 	}
@@ -32,7 +32,7 @@ func RandomNonce() uint32 {
 	return ran.Uint32()
 }
 
-func targetZeros(difficulty uint8) string {
+func targetZeros(difficulty int) string {
 	target := ""
 
 	for i := 0; i < int(difficulty); i++ {

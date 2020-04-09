@@ -190,3 +190,4 @@ func initConnToPeers(peerAddresses map[string]string) map[string]api.PeerClient 
 }
 
 // TODO need to do heart beat and then manage active peers
+// TODO the peer connection is still one way at this point

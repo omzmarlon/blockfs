@@ -1,0 +1,30 @@
+{
+    "minerID" : "miner2",
+	"blocksProcessingBufferSize" : 100,
+	"opsProcessingBufferSize" : 100,
+	"opFloodingBufferSize" : 100,
+    "blockFloodingBufferSize" : 100,
+    "blockfsPort": 3001,
+    "flooderConfig": {
+        "peerPort" : 8081,
+	    "peerOpsFloodBufferSize": 100,
+	    "peerBlocksFloodBufferSize" : 100,
+        "HeatbeatRetryMax": 3,
+        "peers": [
+            {
+                "minerID": "miner1",
+                "address": "localhost:8080"
+            }
+        ]
+    },
+    "blockchainConfig": {
+        "genesisHash": "genesis",
+        "opDifficulty": 4,
+        "noopDifficulty": 4
+    },
+    "coordinatorConfig" : {
+        "MaxOpsQueueSize": 100,
+        "RetryBlockQueueMaxSize": 100,
+        "WaitOpsTimeoutMilli":    1500
+    }
+}

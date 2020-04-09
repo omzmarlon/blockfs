@@ -28,8 +28,8 @@ type Blockchain struct {
 type Conf struct {
 	GenesisHash    string
 	MinerID        string
-	OpDiffculty    uint8
-	NoopDifficulty uint8
+	OpDiffculty    int
+	NoopDifficulty int
 }
 
 // AppendBlockResult - result code for trying to append new block to blockchain
