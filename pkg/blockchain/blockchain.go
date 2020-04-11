@@ -152,7 +152,6 @@ func (blockchain *Blockchain) getBlockHashHelper(block *domain.Block, currDepth 
 	return max, maxhash
 }
 
-// TODO: fix it
 func (blockchain *Blockchain) PrintBlockchain() {
 	fmt.Println("Printing blockchain...")
 	defer fmt.Println("Printing blockchain done...")
@@ -182,6 +181,3 @@ func (blockchain *Blockchain) PrintBlockchain() {
 
 	}
 }
-
-// TODO:
-// printing the entire chain
