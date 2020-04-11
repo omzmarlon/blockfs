@@ -11,9 +11,10 @@ func GrpcBlockToDomainBlock(block api.Block) domain.Block {
 	for i := 0; i < len(ops); i++ {
 		ops[i] = GrpcOpToDomainOp(*block.GetOps()[i])
 	}
-	children := make([]domain.Block, len(block.GetChildren()))
+	children := make([]*domain.Block, len(block.GetChildren()))
 	for i := 0; i < len(children); i++ {
-		children[i] = GrpcBlockToDomainBlock(*block.GetChildren()[i])
+		domainBlock := GrpcBlockToDomainBlock(*block.GetChildren()[i])
+		children[i] = &domainBlock
 	}
 	return domain.Block{
 		Hash:     block.GetHash(),
@@ -34,7 +35,7 @@ func DomainBlockToGrpcBlock(block domain.Block) api.Block {
 	}
 	children := make([]*api.Block, len(*block.Children))
 	for i := 0; i < len(*block.Children); i++ {
-		child := DomainBlockToGrpcBlock((*block.Children)[i])
+		child := DomainBlockToGrpcBlock(*(*block.Children)[i])
 		children[i] = &child
 	}
 	return api.Block{

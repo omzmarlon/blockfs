@@ -11,9 +11,9 @@ import (
 // GenerateBlock generates a new block satisfying provided difficulty
 func GenerateBlock(prevHash string, minerID string, ops []domain.Op,
 	opDifficulty int, noopDifficulty int) *domain.Block {
-	log.Printf("Generating the a new block...")
+	log.Printf("[gen]: Generating the a new block...")
 	start := time.Now().Unix()
-	children := make([]domain.Block, 0)
+	children := make([]*domain.Block, 0)
 	block := &domain.Block{
 		Hash:     "",
 		PrevHash: prevHash,

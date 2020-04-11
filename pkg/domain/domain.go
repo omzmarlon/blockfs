@@ -1,5 +1,7 @@
 package domain
 
+import "fmt"
+
 ////////////////////////////////////////////////////////////////////////////////
 // <BLOCKCHAIN DEFINITIONS>
 
@@ -10,16 +12,26 @@ type Block struct {
 	MinerID  string
 	Ops      []Op
 	Nonce    uint32
-	// pointer to slice but not element of slice because we may append new
-	// child (modifying slice) but not modify the individual element, so we they are
-	// returned we return by value as a copy (although it's still safer to make a copy)
-	// for the ops above, it should never change once created so no pointer to slice
-	Children *[]Block
+	// pointer for both slice and individual block element, because they
+	// are both subject to be modified
+	Children *[]*Block
+}
+
+func (block *Block) String() string {
+	prevHash := ""
+	if len(block.PrevHash) > 0 {
+		prevHash = block.PrevHash[:5]
+	}
+	currHash := ""
+	if len(block.Hash) > 0 {
+		currHash = block.Hash[:5]
+	}
+	return fmt.Sprintf("[P: %s, H: %s, O: %s, M: %s]", prevHash, currHash, block.Ops, block.MinerID)
 }
 
 // NewBlock constructor
 func NewBlock(hash string, prevHash string, minerID string, ops []Op, nonce uint32) Block {
-	children := make([]Block, 0)
+	children := make([]*Block, 0)
 	return Block{
 		Hash:     hash,
 		PrevHash: prevHash,

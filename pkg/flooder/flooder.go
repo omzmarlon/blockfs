@@ -105,8 +105,8 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 	go func() {
 		for {
 			peerFloodReq := <-blocksReqFloodBuffer
-			log.Println("Received a block from peers")
 			domainBlock := util.GrpcBlockToDomainBlock(*peerFloodReq.GetBlock())
+			log.Printf("[flooder]: Received a block from peers: %s", domainBlock.String())
 			blockProcessing <- &domainBlock
 			for peerID, peer := range flooder.peers {
 				inPrevList := false

@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"fmt"
 	"log"
 	"sync"
 
@@ -48,7 +49,7 @@ const (
 // New - initialize the blockchain
 func New(conf Conf) *Blockchain {
 	ops := make([]domain.Op, 0)
-	children := make([]domain.Block, 0)
+	children := make([]*domain.Block, 0)
 	genesis := &domain.Block{
 		Hash:     conf.GenesisHash,
 		PrevHash: "",
@@ -69,9 +70,6 @@ func New(conf Conf) *Blockchain {
 func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult {
 	blockchain.chainRWLock.Lock()
 	defer blockchain.chainRWLock.Unlock()
-	// TODO
-	// find the place to append
-	// blockfs semantic check
 	if !blockchain.verifyBlock(block) {
 		return APPEND_RESULT_INVALID_BLOCK
 	}
@@ -90,13 +88,13 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 					return APPEND_RESULT_DUPLICATE
 				}
 			}
-
-			*curr.Children = append(*curr.Children, *block)
+			// TODO blockfs semantic check before appending
+			*curr.Children = append(*curr.Children, block)
 			blockchain.PrintBlockchain()
 			return APPEND_RESULT_SUCCESS
 		}
 		for _, child := range *curr.Children {
-			q.Put(&child)
+			q.Put(child)
 		}
 
 	}
@@ -119,7 +117,7 @@ func (blockchain *Blockchain) verifyBlock(block *domain.Block) bool {
 		return true
 	}
 	for _, child := range *block.Children {
-		if !blockchain.verifyBlock(&child) {
+		if !blockchain.verifyBlock(child) {
 			return false
 		}
 
@@ -145,7 +143,7 @@ func (blockchain *Blockchain) getBlockHashHelper(block *domain.Block, currDepth 
 	max := currDepth
 	maxhash := ""
 	for _, child := range *block.Children {
-		depth, hash := blockchain.getBlockHashHelper(&child, currDepth+1)
+		depth, hash := blockchain.getBlockHashHelper(child, currDepth+1)
 		if depth > max {
 			max = depth
 			maxhash = hash
@@ -154,9 +152,11 @@ func (blockchain *Blockchain) getBlockHashHelper(block *domain.Block, currDepth 
 	return max, maxhash
 }
 
+// TODO: fix it
 func (blockchain *Blockchain) PrintBlockchain() {
 	q := queue.New(10)
 	q.Put(blockchain.genesis)
+	q.Put(&domain.Block{Hash: "xxx"})
 	for q.Len() != 0 {
 		res, err := q.Get(1)
 		if err != nil {
@@ -164,18 +164,16 @@ func (blockchain *Blockchain) PrintBlockchain() {
 			return
 		}
 		curr := res[0].(*domain.Block)
-		prevHash := ""
-		if len(curr.PrevHash) > 0 {
-			prevHash = curr.PrevHash[:5]
+		if curr.Hash == "xxx" {
+			fmt.Print("\n")
+			continue
+		} else {
+			fmt.Print(curr.String())
 		}
-		currHash := ""
-		if len(curr.Hash) > 0 {
-			currHash = curr.Hash[:5]
-		}
-		log.Printf("[P: %s, H: %s, O: %s, M: %s]", prevHash, currHash, curr.Ops, curr.MinerID)
 		for _, child := range *curr.Children {
-			q.Put(&child)
+			q.Put(child)
 		}
+		q.Put(&domain.Block{Hash: "xxx"})
 	}
 }
 

@@ -54,11 +54,12 @@ func (coordinator *Coordinator) blockProcessorDaemon(blocksBuffer <-chan *domain
 	for {
 		if len(blocksBuffer) != 0 {
 			block := <-blocksBuffer
-			log.Printf("Got block: %+v", block)
+			log.Printf("[blockProcessorDaemon]: processing block: %s", block.String())
 			go coordinator.processBlockHelper(block)
 		}
 		if len(coordinator.retryBlockQueue) != 0 {
 			block := <-coordinator.retryBlockQueue
+			//log.Printf("[blockProcessorDaemon]: retrying block: %s", block.String())
 			go coordinator.processBlockHelper(block)
 		}
 	}
