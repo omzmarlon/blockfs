@@ -154,9 +154,11 @@ func (blockchain *Blockchain) getBlockHashHelper(block *domain.Block, currDepth 
 
 // TODO: fix it
 func (blockchain *Blockchain) PrintBlockchain() {
+	fmt.Println("Printing blockchain...")
+	defer fmt.Println("Printing blockchain done...")
 	q := queue.New(10)
 	q.Put(blockchain.genesis)
-	q.Put(&domain.Block{Hash: "xxx"})
+	q.Put(&domain.Block{Hash: "placeholder"})
 	for q.Len() != 0 {
 		res, err := q.Get(1)
 		if err != nil {
@@ -164,16 +166,20 @@ func (blockchain *Blockchain) PrintBlockchain() {
 			return
 		}
 		curr := res[0].(*domain.Block)
-		if curr.Hash == "xxx" {
+
+		if curr.Hash == "placeholder" && q.Len() == 0 {
 			fmt.Print("\n")
-			continue
+			return
+		} else if curr.Hash == "placeholder" {
+			q.Put(&domain.Block{Hash: "placeholder"})
+			fmt.Print("\n")
 		} else {
 			fmt.Print(curr.String())
+			for _, child := range *curr.Children {
+				q.Put(child)
+			}
 		}
-		for _, child := range *curr.Children {
-			q.Put(child)
-		}
-		q.Put(&domain.Block{Hash: "xxx"})
+
 	}
 }
 

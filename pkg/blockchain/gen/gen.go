@@ -35,6 +35,6 @@ func GenerateBlock(prevHash string, minerID string, ops []domain.Op,
 	}
 	block.Hash = util.ComputeBlockHash(*block)
 
-	log.Printf("New block generated! Hash: %s. Took %d seconds", block.Hash, time.Now().Unix()-start)
+	log.Printf("[gen]: New block: %s. Took %d seconds", block.String(), time.Now().Unix()-start)
 	return block
 }
