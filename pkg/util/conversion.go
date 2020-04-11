@@ -19,7 +19,7 @@ func GrpcBlockToDomainBlock(block api.Block) domain.Block {
 		Hash:     block.GetHash(),
 		PrevHash: block.GetPrevHash(),
 		MinerID:  block.GetMinerId(),
-		Ops:      &ops,
+		Ops:      ops,
 		Nonce:    block.GetNounce(),
 		Children: &children,
 	}
@@ -27,9 +27,9 @@ func GrpcBlockToDomainBlock(block api.Block) domain.Block {
 
 // DomainBlockToGrpcBlock - converts domain block type to grpc block type
 func DomainBlockToGrpcBlock(block domain.Block) api.Block {
-	ops := make([]*api.Op, len(*block.Ops))
-	for i := 0; i < len(*block.Ops); i++ {
-		op := DomainOpToGrpcOp((*block.Ops)[i])
+	ops := make([]*api.Op, len(block.Ops))
+	for i := 0; i < len(block.Ops); i++ {
+		op := DomainOpToGrpcOp(block.Ops[i])
 		ops[i] = &op
 	}
 	children := make([]*api.Block, len(*block.Children))

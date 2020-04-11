@@ -8,13 +8,17 @@ type Block struct {
 	Hash     string
 	PrevHash string
 	MinerID  string
-	Ops      *[]Op
+	Ops      []Op
 	Nonce    uint32
+	// pointer to slice but not element of slice because we may append new
+	// child (modifying slice) but not modify the individual element, so we they are
+	// returned we return by value as a copy (although it's still safer to make a copy)
+	// for the ops above, it should never change once created so no pointer to slice
 	Children *[]Block
 }
 
 // NewBlock constructor
-func NewBlock(hash string, prevHash string, minerID string, ops *[]Op, nonce uint32) Block {
+func NewBlock(hash string, prevHash string, minerID string, ops []Op, nonce uint32) Block {
 	children := make([]Block, 0)
 	return Block{
 		Hash:     hash,
