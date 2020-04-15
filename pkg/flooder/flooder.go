@@ -4,8 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
-	"strconv"
-	"time"
+	"sync"
 
 	guuid "github.com/google/uuid"
 	"github.com/omzmarlon/blockfs/pkg/api"
@@ -18,19 +17,26 @@ import (
 
 // Flooder manages flooding blocks and ops to peers and receiving data from peers
 type Flooder struct {
-	conf       Conf
-	blockchain *blockchain.Blockchain
-	peers      map[string]api.PeerClient
+	conf            Conf
+	blockchain      *blockchain.Blockchain
+	peers           map[string]peerStreams
+	peersAccessLock sync.RWMutex // peers list accessing lock
 }
 
 // Conf - configuration for Flooder
 type Conf struct {
 	MinerID                   string
-	Port                      int // port to serve grpc service
+	Address                   string
 	PeerOpsFloodBufferSize    int
 	PeerBlocksFloodBufferSize int
 	HeatbeatRetryMax          int
 	Peers                     map[string]string // a map of minerID -> IPPort address
+}
+
+// peerStreams - holds grpc streams to a peer
+type peerStreams struct {
+	blockStream api.Peer_FloodBlockClient
+	opStream    api.Peer_FloodOpClient
 }
 
 // New is the constructor for a new flooder
@@ -38,7 +44,7 @@ func New(conf Conf, blockchain *blockchain.Blockchain) *Flooder {
 	flooder := &Flooder{
 		conf:       conf,
 		blockchain: blockchain,
-		peers:      initConnToPeers(conf.Peers),
+		peers:      initConnToPeers(conf),
 	}
 	return flooder
 }
@@ -58,135 +64,203 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 	blocksReqFloodBuffer := make(chan api.FloodBlockRequest, flooder.conf.PeerBlocksFloodBufferSize)
 	// a channel for buffering ops flooded from peers
 	opsReqFloodBuffer := make(chan api.FloodOpRequest, flooder.conf.PeerOpsFloodBufferSize)
+	// TODO function too long, don't use anonymous func here
 	// kick off daemon for the grpc service to accept flooding requests from peers
 	go func() {
-		lis, err := net.Listen("tcp", ":"+strconv.Itoa(flooder.conf.Port))
+		lis, err := net.Listen("tcp", flooder.conf.Address)
 		if err != nil {
 			log.Fatalf("flooder failed to listen: %v", err)
 		}
 		s := grpc.NewServer()
 		rpc.RegisterMiner(s, blocksReqFloodBuffer, opsReqFloodBuffer)
 		s.Serve(lis)
-
 	}()
 	// kick off daemon to flood locally generated blocks to peers
-	go func() {
-		for {
-			block := <-blockFloodingBuffer
-			log.Println("Got a block to flood to peers")
-			grpcBlock := util.DomainBlockToGrpcBlock(*block)
-			floodReq := &api.FloodBlockRequest{
-				RequestId:         guuid.New().String(),
-				PreviousReceivers: []string{flooder.conf.MinerID},
-				Block:             &grpcBlock,
-			}
-			for _, peer := range flooder.peers {
-				sendFloodBlockRequestHelper(peer, floodReq)
-			}
-		}
-	}()
+	go flooder.localBlockFlooderDaemon(blockFloodingBuffer)
 	// kick off daemon to flood client submitted ops to peers
-	go func() {
-		for {
-			op := <-opsFloodingBuffer
-			log.Println("Got an op to flood to peers")
-			grpcOp := util.DomainOpToGrpcOp(*op)
-			floodReq := &api.FloodOpRequest{
-				RequestId:         guuid.New().String(),
-				PreviousReceivers: []string{flooder.conf.MinerID},
-				Op:                &grpcOp,
-			}
-			for _, peer := range flooder.peers {
-				sendFloodOpRequestHelper(peer, floodReq)
-			}
-		}
-	}()
+	go flooder.clientOpFlooderDaemon(opsFloodingBuffer)
 	// kick off daemon to handle blocks flooded from peers
-	go func() {
-		for {
-			peerFloodReq := <-blocksReqFloodBuffer
-			domainBlock := util.GrpcBlockToDomainBlock(*peerFloodReq.GetBlock())
-			log.Printf("[flooder]: Received a block from peers: %s", domainBlock.String())
-			blockProcessing <- &domainBlock
-			for peerID, peer := range flooder.peers {
-				inPrevList := false
-				for _, prevID := range peerFloodReq.GetPreviousReceivers() {
-					if peerID == prevID {
-						inPrevList = true
-					}
-				}
-				if !inPrevList {
-					newReceivers := append(peerFloodReq.GetPreviousReceivers(), flooder.conf.MinerID)
-					newReq := &api.FloodBlockRequest{
-						RequestId:         peerFloodReq.GetRequestId(),
-						PreviousReceivers: newReceivers,
-						Block:             peerFloodReq.GetBlock(),
-					}
-					sendFloodBlockRequestHelper(peer, newReq)
-				}
-			}
-		}
-	}()
+	go flooder.peerBlockHandlerDaemon(blocksReqFloodBuffer, blockProcessing)
 	// kick off daemon to handle ops flooded from peers
-	go func() {
-		for {
-			peerFloodReq := <-opsReqFloodBuffer
-			log.Println("Received an op from peers")
-			domainOp := util.GrpcOpToDomainOp(*peerFloodReq.GetOp())
-			opsProcessing <- &domainOp
-			for peerID, peer := range flooder.peers {
-				inPrevList := false
-				for _, prevID := range peerFloodReq.GetPreviousReceivers() {
-					if peerID == prevID {
-						inPrevList = true
-					}
-				}
-				if !inPrevList {
-					newReceivers := append(peerFloodReq.GetPreviousReceivers(), flooder.conf.MinerID)
-					newReq := &api.FloodOpRequest{
-						RequestId:         peerFloodReq.GetRequestId(),
-						PreviousReceivers: newReceivers,
-						Op:                peerFloodReq.GetOp(),
-					}
-					sendFloodOpRequestHelper(peer, newReq)
-				}
-			}
-		}
-	}()
+	go flooder.peerOpHandlerDaemon(opsReqFloodBuffer, opsProcessing)
 }
 
-func sendFloodBlockRequestHelper(client api.PeerClient, request *api.FloodBlockRequest) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_, err := client.FloodBlock(ctx, request)
-	if err != nil {
-		log.Fatal("flooding to one of the clients failed")
-	}
-}
-
-func sendFloodOpRequestHelper(client api.PeerClient, request *api.FloodOpRequest) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_, err := client.FloodOp(ctx, request)
-	if err != nil {
-		log.Fatal("flooding to one of the clients failed")
-	}
-}
-
-func initConnToPeers(peerAddresses map[string]string) map[string]api.PeerClient {
-	result := make(map[string]api.PeerClient)
-	for minerID, addr := range peerAddresses {
+func initConnToPeers(conf Conf) map[string]peerStreams {
+	result := make(map[string]peerStreams)
+	for minerID, addr := range conf.Peers {
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
 			log.Fatalf("did not connect to peer %s for err: %s", addr, err)
 		} else {
 			// TODO: don't support dynamically adding/removing peers yet
 			// so if anything fails to connect, we just forget them for now
-			result[minerID] = api.NewPeerClient(conn)
+			newPeer := api.NewPeerClient(conn)
+			if ps, err := newPeerStreams(newPeer); err == nil {
+				result[minerID] = *ps
+			}
 		}
 
 	}
+
+	keys := make([]string, len(result))
+	for k := range result {
+		keys = append(keys, k)
+	}
+	log.Printf("[flooder]: initial peer list: %s", keys)
 	return result
+}
+
+func (flooder *Flooder) localBlockFlooderDaemon(blockFloodingBuffer <-chan *domain.Block) {
+	for {
+		block := <-blockFloodingBuffer
+		log.Printf("[flooder]: flooding block with %s", block.Hash)
+		grpcBlock := util.DomainBlockToGrpcBlock(*block)
+		floodReq := &api.FloodBlockRequest{
+			RequestId:         guuid.New().String(),
+			PreviousReceivers: []string{flooder.conf.MinerID},
+			Block:             &grpcBlock,
+			MinerID:           flooder.conf.MinerID,
+			Address:           flooder.conf.Address,
+		}
+		for _, peer := range flooder.peers {
+			err := peer.blockStream.Send(floodReq)
+			if err != nil {
+				log.Printf("[flooder]: failed to flood block with hash %s to peer due to err %s", block.Hash, err)
+			}
+		}
+	}
+}
+
+func (flooder *Flooder) clientOpFlooderDaemon(opsFloodingBuffer <-chan *domain.Op) {
+	for {
+		op := <-opsFloodingBuffer
+		log.Printf("[flooder]: flooding op on file %s with action %d", op.Filename, op.OpAction)
+		grpcOp := util.DomainOpToGrpcOp(*op)
+		floodReq := &api.FloodOpRequest{
+			RequestId:         guuid.New().String(),
+			PreviousReceivers: []string{flooder.conf.MinerID},
+			Op:                &grpcOp,
+			MinerID:           flooder.conf.MinerID,
+			Address:           flooder.conf.Address,
+		}
+		for _, peer := range flooder.peers {
+			err := peer.opStream.Send(floodReq)
+			if err != nil {
+				log.Printf("[flooder]: failed to flood op to peer due to err %s", err)
+			}
+		}
+	}
+}
+
+func (flooder *Flooder) peerBlockHandlerDaemon(blocksReqFloodBuffer chan api.FloodBlockRequest,
+	blockProcessing chan<- *domain.Block) {
+	for {
+		peerFloodReq := <-blocksReqFloodBuffer
+		domainBlock := util.GrpcBlockToDomainBlock(*peerFloodReq.GetBlock())
+		log.Printf("[flooder]: Received a block from peers: %s", domainBlock.String())
+		flooder.addNewPeerIfNotExists(peerFloodReq.MinerID, peerFloodReq.Address)
+		blockProcessing <- &domainBlock
+		for peerID, peer := range flooder.peers {
+			inPrevList := false
+			for _, prevID := range peerFloodReq.GetPreviousReceivers() {
+				if peerID == prevID {
+					inPrevList = true
+				}
+			}
+			if !inPrevList {
+				newReceivers := append(peerFloodReq.GetPreviousReceivers(), flooder.conf.MinerID)
+				newReq := &api.FloodBlockRequest{
+					RequestId:         peerFloodReq.GetRequestId(),
+					PreviousReceivers: newReceivers,
+					Block:             peerFloodReq.GetBlock(),
+					MinerID:           flooder.conf.MinerID,
+					Address:           flooder.conf.Address,
+				}
+				err := peer.blockStream.Send(newReq)
+				if err != nil {
+					log.Printf("[flooder]: failed to flood block with hash %s to peer due to err %s",
+						peerFloodReq.GetBlock().Hash, err)
+				}
+			}
+		}
+	}
+}
+
+func (flooder *Flooder) peerOpHandlerDaemon(opsReqFloodBuffer chan api.FloodOpRequest, opsProcessing chan<- *domain.Op) {
+	for {
+		peerFloodReq := <-opsReqFloodBuffer
+		log.Println("Received an op from peers")
+		domainOp := util.GrpcOpToDomainOp(*peerFloodReq.GetOp())
+		flooder.addNewPeerIfNotExists(peerFloodReq.MinerID, peerFloodReq.Address)
+		opsProcessing <- &domainOp
+		for peerID, peer := range flooder.peers {
+			inPrevList := false
+			for _, prevID := range peerFloodReq.GetPreviousReceivers() {
+				if peerID == prevID {
+					inPrevList = true
+				}
+			}
+			if !inPrevList {
+				newReceivers := append(peerFloodReq.GetPreviousReceivers(), flooder.conf.MinerID)
+				newReq := &api.FloodOpRequest{
+					RequestId:         peerFloodReq.GetRequestId(),
+					PreviousReceivers: newReceivers,
+					Op:                peerFloodReq.GetOp(),
+					MinerID:           flooder.conf.MinerID,
+					Address:           flooder.conf.Address,
+				}
+				err := peer.opStream.Send(newReq)
+				if err != nil {
+					log.Printf("[flooder]: failed to flood op to peer due to err %s", err)
+				}
+			}
+		}
+	}
+}
+
+func (flooder *Flooder) peerExists(minerID string) bool {
+	flooder.peersAccessLock.RLock()
+	defer flooder.peersAccessLock.RUnlock()
+	_, ok := flooder.peers[minerID]
+	return ok
+}
+
+func (flooder *Flooder) addNewPeer(minerID string, streams peerStreams) {
+	flooder.peersAccessLock.Lock()
+	defer flooder.peersAccessLock.Unlock()
+	flooder.peers[minerID] = streams
+}
+
+func (flooder *Flooder) addNewPeerIfNotExists(minerID string, address string) {
+	if !flooder.peerExists(minerID) {
+		log.Printf("[flooder]: adding new peer %s", minerID)
+		conn, err := grpc.Dial(address, grpc.WithInsecure())
+		if err != nil {
+			log.Fatalf("did not connect to peer %s for err: %s", address, err)
+		} else {
+			newPeer := api.NewPeerClient(conn)
+			if ps, err := newPeerStreams(newPeer); err == nil {
+				flooder.addNewPeer(minerID, *ps)
+			}
+		}
+	}
+}
+
+func newPeerStreams(peerClient api.PeerClient) (*peerStreams, error) {
+	blockStream, berr := peerClient.FloodBlock(context.Background())
+	if berr != nil {
+		log.Printf("[flooder]: could not set up block flooding stream due to err %s", berr)
+		return nil, berr
+	}
+	opStream, oerr := peerClient.FloodOp(context.Background())
+	if oerr != nil {
+		log.Printf("[flooder]: could not set up op flooding stream due to err %s", oerr)
+		return nil, oerr
+	}
+	return &peerStreams{
+		blockStream: blockStream,
+		opStream:    opStream,
+	}, nil
 }
 
 // TODO need to do heart beat and then manage active peers

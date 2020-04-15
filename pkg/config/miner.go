@@ -24,7 +24,7 @@ type BlockchainConfig struct {
 }
 
 type FlooderConfig struct {
-	PeerPort                  int
+	Address                   string
 	PeerOpsFloodBufferSize    int
 	PeerBlocksFloodBufferSize int
 	HeatbeatRetryMax          int

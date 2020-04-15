@@ -2,7 +2,10 @@ syntax = "proto3";
 
 package protobuf;
 
+import "google/rpc/status.proto";
+
 option go_package = "pkg/api";
+
 
 message Block {
     string hash = 1;
@@ -31,21 +34,29 @@ message FloodBlockRequest {
     string request_id = 1;
     repeated string previous_receivers = 2;
     Block block = 3;
+    string minerID = 4; // the miner who sends this request
+    string address = 5; // address of the miner who sends this request
 }
 
 message FloodChainRequest {
     string request_id = 1;
     repeated string previous_receivers = 2;
     Block chain = 3;
+    string minerID = 4; // the miner who sends this request
+    string address = 5; // address of the miner who sends this request
 }
 
 message FloodOpRequest {
     string request_id = 1;
     repeated string previous_receivers = 2;
     Op op = 3;
+    string minerID = 4; // the miner who sends this request
+    string address = 5; // address of the miner who sends this request
 }
 
-message FloodResponse {}
+message FloodResponse {
+    string request_id = 1;
+}
 
 message HeartBeatRequest {
     string fromMiner = 1;
@@ -58,8 +69,8 @@ message HeartBeatResponse {
 
 // service for miner peer communication
 service Peer {
-    rpc FloodBlock (FloodBlockRequest) returns (FloodResponse) {}
-    rpc FloodChain (FloodChainRequest) returns (FloodResponse) {}
-    rpc FloodOp (FloodOpRequest) returns (FloodResponse) {}
+    rpc FloodBlock (stream FloodBlockRequest) returns (stream FloodResponse) {}
+    rpc FloodChain (stream FloodChainRequest) returns (stream FloodResponse) {}
+    rpc FloodOp (stream FloodOpRequest) returns (stream FloodResponse) {}
     rpc HeartBeat(HeartBeatRequest) returns (HeartBeatResponse) {}
 }

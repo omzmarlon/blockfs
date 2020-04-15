@@ -6,7 +6,7 @@
     "blockFloodingBufferSize" : 100,
     "blockfsPort": 3001,
     "flooderConfig": {
-        "peerPort" : 8081,
+        "Address" : "127.0.0.1:8081",
 	    "peerOpsFloodBufferSize": 100,
 	    "peerBlocksFloodBufferSize" : 100,
         "HeatbeatRetryMax": 3,

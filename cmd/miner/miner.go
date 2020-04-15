@@ -46,7 +46,7 @@ func main() {
 
 	flooder := flooder.New(flooder.Conf{
 		MinerID:                   minerConfig.MinerID,
-		Port:                      minerConfig.FlooderConfig.PeerPort,
+		Address:                   minerConfig.FlooderConfig.Address,
 		PeerOpsFloodBufferSize:    minerConfig.FlooderConfig.PeerOpsFloodBufferSize,
 		PeerBlocksFloodBufferSize: minerConfig.FlooderConfig.PeerBlocksFloodBufferSize,
 		HeatbeatRetryMax:          minerConfig.FlooderConfig.HeatbeatRetryMax,
