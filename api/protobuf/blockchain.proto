@@ -70,7 +70,6 @@ message HeartBeatResponse {
 // service for miner peer communication
 service Peer {
     rpc FloodBlock (stream FloodBlockRequest) returns (stream FloodResponse) {}
-    rpc FloodChain (stream FloodChainRequest) returns (stream FloodResponse) {}
     rpc FloodOp (stream FloodOpRequest) returns (stream FloodResponse) {}
     rpc HeartBeat(HeartBeatRequest) returns (HeartBeatResponse) {}
 }

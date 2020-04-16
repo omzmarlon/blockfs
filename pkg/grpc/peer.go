@@ -8,16 +8,7 @@ import (
 	"github.com/omzmarlon/blockfs/pkg/api"
 
 	"google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
-
-// TODO:
-// CHANGE PROGRAMMING MODEL
-// use birectional grpc streaming so that I don;t need to handle pairing connection myself
-// this peer class handles all the sending/receiving flooding requests/responses
-// flooder use channels to communicate with peer class to send/receiving flooding (flooder does not send requests by itself anymore!)
-// the authentication can be done on init and then piggypack some token to all the following requests
 
 // Peer is grpc service for receiving flooded blocks, ops, and chains
 type Peer struct {
@@ -42,15 +33,6 @@ func (peer *Peer) FloodBlock(stream api.Peer_FloodBlockServer) error {
 			continue
 		}
 	}
-}
-
-// FloodChain - flood chains to and from peers
-func (peer *Peer) FloodChain(stream api.Peer_FloodChainServer) error {
-	// TODO
-	// I'm thinking that all the channels for buffering can be reused
-	// i.e. I can just reuse the block channels for blockchains
-	// it's just that when merging with local blockchain it will be different (the difference is only in blockchain.go)
-	return status.Errorf(codes.Unimplemented, "method FloodChain not implemented")
 }
 
 // FloodOp - flood ops to and from peers

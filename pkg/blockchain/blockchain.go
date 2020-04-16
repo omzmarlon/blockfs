@@ -55,7 +55,7 @@ func New(conf Conf) *Blockchain {
 		PrevHash: "",
 		MinerID:  conf.MinerID,
 		Ops:      ops,
-		Nonce:    util.RandomNonce(),
+		Nonce:    0,
 		Children: &children,
 	}
 	ret := &Blockchain{
@@ -99,6 +99,57 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 
 	}
 	return APPEND_RESULT_NOT_FOUND
+}
+
+// CloneChain - make a complete copy of the current local blockchain
+func (blockchain *Blockchain) CloneChain() domain.Block {
+	blockchain.chainRWLock.RLock()
+	defer blockchain.chainRWLock.RUnlock()
+	result := domain.Block{
+		Hash:     blockchain.Conf.GenesisHash,
+		PrevHash: "",
+		MinerID:  blockchain.Conf.MinerID,
+		Ops:      make([]domain.Op, 0),
+		Nonce:    0,
+	}
+	children := make([]*domain.Block, len(*blockchain.genesis.Children))
+	if len(*blockchain.genesis.Children) == 0 {
+		result.Children = &children
+		return result
+	}
+	for i := 0; i < len(*blockchain.genesis.Children); i++ {
+		child := blockchain.cloneChainHelper(*(*blockchain.genesis.Children)[i])
+		children[i] = &child
+	}
+	result.Children = &children
+	return result
+}
+
+func (blockchain *Blockchain) cloneChainHelper(root domain.Block) domain.Block {
+	ops := make([]domain.Op, len(root.Ops))
+	for i := 0; i < len(root.Ops); i++ {
+		ops[i] = domain.NewOp(root.Ops[i].OpID, root.Ops[i].MinerID,
+			root.Ops[i].OpAction, root.Ops[i].Filename, root.Ops[i].Record)
+	}
+	result := domain.Block{
+		Hash:     root.Hash,
+		PrevHash: root.PrevHash,
+		MinerID:  root.MinerID,
+		Ops:      ops,
+		Nonce:    root.Nonce,
+		// Children *[]*Block
+	}
+	children := make([]*domain.Block, len(*root.Children))
+	if len(*root.Children) == 0 {
+		result.Children = &children
+		return result
+	}
+	for i := 0; i < len(*root.Children); i++ {
+		child := blockchain.cloneChainHelper(*(*root.Children)[i])
+		children[i] = &child
+	}
+	result.Children = &children
+	return result
 }
 
 func (blockchain *Blockchain) verifyBlock(block *domain.Block) bool {

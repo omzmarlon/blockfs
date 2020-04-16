@@ -241,6 +241,20 @@ func (flooder *Flooder) addNewPeerIfNotExists(minerID string, address string) {
 			newPeer := api.NewPeerClient(conn)
 			if ps, err := newPeerStreams(newPeer); err == nil {
 				flooder.addNewPeer(minerID, *ps)
+				// need to flood the local blockchain to the new peer
+				// flood each child of the genesis block as everyone has the same genesis
+				clone := flooder.blockchain.CloneChain()
+				for i := 0; i < len(*clone.Children); i++ {
+					child := util.DomainBlockToGrpcBlock(*(*clone.Children)[i])
+					req := api.FloodBlockRequest{
+						RequestId:         guuid.New().String(),
+						PreviousReceivers: []string{flooder.conf.MinerID},
+						Block:             &child,
+						MinerID:           flooder.conf.MinerID,
+						Address:           flooder.conf.Address,
+					}
+					ps.blockStream.Send(&req)
+				}
 			}
 		}
 	}
@@ -264,4 +278,3 @@ func newPeerStreams(peerClient api.PeerClient) (*peerStreams, error) {
 }
 
 // TODO need to do heart beat and then manage active peers
-// TODO the peer connection is still one way at this point
