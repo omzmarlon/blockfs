@@ -70,6 +70,6 @@ func main() {
 	}
 	log.Println("Starting BlockFS rpc service... ")
 	s := grpc.NewServer()
-	rpc.RegisterBlockFS(s)
+	rpc.RegisterBlockFS(s, opsProcessing, bc)
 	s.Serve(lis)
 }

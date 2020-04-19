@@ -3,7 +3,10 @@ package grpc
 import (
 	"context"
 
+	guuid "github.com/google/uuid"
 	pb "github.com/omzmarlon/blockfs/pkg/api"
+	"github.com/omzmarlon/blockfs/pkg/blockchain"
+	"github.com/omzmarlon/blockfs/pkg/domain"
 	status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -14,10 +17,21 @@ import (
 
 // blockfs is the grpc server for service the block file system
 type blockfs struct {
+	opsProcessing chan<- *domain.Op
+	blockchain    *blockchain.Blockchain
 }
 
 // CreateFile - handle file create in the blockfs
-func (*blockfs) CreateFile(ctx context.Context, req *pb.CreateFileRequest) (*pb.CreateFileResponse, error) {
+func (fs *blockfs) CreateFile(ctx context.Context, req *pb.CreateFileRequest) (*pb.CreateFileResponse, error) {
+	op := &domain.Op{
+		OpID:     guuid.New().String(),
+		MinerID:  "",
+		OpAction: domain.OpCREATE,
+		Filename: req.FileName,
+		Record:   make([]byte, 0),
+	}
+	fs.opsProcessing <- op
+	// TODO: should not return until confirmed by peers
 	return &pb.CreateFileResponse{
 		Status: &status.Status{Code: int32(codes.OK)},
 	}, nil
@@ -56,6 +70,9 @@ func (*blockfs) AppendRec(ctx context.Context, req *pb.AppendRecRequest) (*pb.Ap
 }
 
 // RegisterBlockFS - registers the blockfs rpc service
-func RegisterBlockFS(s *grpc.Server) {
-	pb.RegisterBlockFSServer(s, &blockfs{})
+func RegisterBlockFS(s *grpc.Server, opsProcessing chan<- *domain.Op, blockchain *blockchain.Blockchain) {
+	pb.RegisterBlockFSServer(s, &blockfs{
+		opsProcessing: opsProcessing,
+		blockchain:    blockchain,
+	})
 }

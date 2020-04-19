@@ -15,6 +15,13 @@ type Block struct {
 	// pointer for both slice and individual block element, because they
 	// are both subject to be modified
 	Children *[]*Block
+	Metadata Metadata
+}
+
+// Metadata attached to each block to assit faster look up
+type Metadata struct {
+	LongestChainLength uint64
+	Parent             *Block
 }
 
 func (block *Block) String() string {
@@ -26,7 +33,13 @@ func (block *Block) String() string {
 	if len(block.Hash) > 0 {
 		currHash = block.Hash[:5]
 	}
-	return fmt.Sprintf("[P: %s, H: %s, O: %s, M: %s]", prevHash, currHash, block.Ops, block.MinerID)
+	ops := "{"
+	for _, op := range block.Ops {
+		ops += (op.String() + ",")
+
+	}
+	ops += "}"
+	return fmt.Sprintf("[P: %s, H: %s, O: %s, M: %s, Depth: %d]", prevHash, currHash, ops, block.MinerID, block.Metadata.LongestChainLength)
 }
 
 // NewBlock constructor
@@ -52,6 +65,19 @@ type Op struct {
 	OpAction OpAction
 	Filename string
 	Record   []byte
+}
+
+func (op *Op) String() string {
+	var actionString string
+	switch op.OpAction {
+	case OpAPPEND:
+		actionString = "APPEND"
+	case OpCREATE:
+		actionString = "CREATE"
+	default:
+		actionString = "UNKNOWN"
+	}
+	return fmt.Sprintf("<A: %s, F:%s>", actionString, op.Filename)
 }
 
 // NewOp constructor

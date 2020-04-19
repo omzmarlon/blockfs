@@ -278,3 +278,7 @@ func newPeerStreams(peerClient api.PeerClient) (*peerStreams, error) {
 }
 
 // TODO need to do heart beat and then manage active peers
+// a dedicated daemon to do this
+// periodic heartbeat
+// heart beat timeout
+// max retry

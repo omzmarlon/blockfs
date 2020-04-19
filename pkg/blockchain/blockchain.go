@@ -20,10 +20,6 @@ type Blockchain struct {
 	Conf        Conf
 	genesis     *domain.Block
 	chainRWLock sync.RWMutex // Mutexes usually work without pointers
-
-	// TODO
-	// read/write lock when accessing data?
-
 }
 
 // Conf - configurations for the blockchain
@@ -57,6 +53,10 @@ func New(conf Conf) *Blockchain {
 		Ops:      ops,
 		Nonce:    0,
 		Children: &children,
+		Metadata: domain.Metadata{
+			LongestChainLength: 1,
+			Parent:             nil,
+		},
 	}
 	ret := &Blockchain{
 		Conf:    conf,
@@ -73,6 +73,7 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 	if !blockchain.verifyBlock(block) {
 		return APPEND_RESULT_INVALID_BLOCK
 	}
+	blockchain.preprocessBlockMetadata(block)
 	q := queue.New(10)
 	q.Put(blockchain.genesis)
 	for q.Len() != 0 {
@@ -90,6 +91,9 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 			}
 			// TODO blockfs semantic check before appending
 			*curr.Children = append(*curr.Children, block)
+			// preserving some metadata to assist faster lookup
+			block.Metadata.Parent = curr
+			blockchain.updateParentsMetaHelper(block.Metadata.Parent, uint64(block.Metadata.LongestChainLength))
 			blockchain.PrintBlockchain()
 			return APPEND_RESULT_SUCCESS
 		}
@@ -99,6 +103,37 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 
 	}
 	return APPEND_RESULT_NOT_FOUND
+}
+
+func (blockchain *Blockchain) updateParentsMetaHelper(start *domain.Block, subChainLen uint64) {
+	if subChainLen+1 > start.Metadata.LongestChainLength {
+		start.Metadata.LongestChainLength = subChainLen + 1
+	}
+	if start.Metadata.Parent != nil {
+		blockchain.updateParentsMetaHelper(start.Metadata.Parent, start.Metadata.LongestChainLength)
+	}
+}
+
+func (blockchain *Blockchain) preprocessBlockMetadata(block *domain.Block) {
+	if len(*block.Children) == 0 {
+		block.Metadata.LongestChainLength = 1
+		return
+	}
+	length := blockchain.chainLengthHelper(block)
+	block.Metadata.LongestChainLength = length
+}
+
+func (blockchain *Blockchain) chainLengthHelper(block *domain.Block) uint64 {
+	max := uint64(0)
+	for _, child := range *block.Children {
+		depth := blockchain.chainLengthHelper(child)
+		child.Metadata.Parent = block
+		child.Metadata.LongestChainLength = depth
+		if depth > max {
+			max = depth
+		}
+	}
+	return max + 1
 }
 
 // CloneChain - make a complete copy of the current local blockchain
@@ -149,6 +184,28 @@ func (blockchain *Blockchain) cloneChainHelper(root domain.Block) domain.Block {
 		children[i] = &child
 	}
 	result.Children = &children
+	return result
+}
+
+// GetData returns all the ops on the longest chain
+func (blockchain *Blockchain) GetData() [][]domain.Op {
+	blockchain.chainRWLock.RLock()
+	defer blockchain.chainRWLock.RUnlock()
+	result := make([][]domain.Op, 0)
+	curr := blockchain.genesis
+	for {
+		result = append(result, curr.Ops)
+		if len(*curr.Children) == 0 {
+			break
+		}
+		curr = (*curr.Children)[0]
+		maxLen := curr.Metadata.LongestChainLength
+		for _, child := range *curr.Children {
+			if child.Metadata.LongestChainLength > maxLen {
+				curr = child
+			}
+		}
+	}
 	return result
 }
 
