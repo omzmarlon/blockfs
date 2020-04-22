@@ -93,13 +93,18 @@ func (coordinator *Coordinator) opProcessorDaemon(blockBuffer chan<- *domain.Blo
 		}
 		select {
 		case <-timer.C:
+			log.Println("[coordinator]: Time out for Ops reached, starting block generation...")
 			numOps := util.MinInt(len(opsBuffer), coordinator.conf.MaxOpsQueueSize)
-			ops := make([]domain.Op, numOps)
+			ops := make([]domain.Op, 0)
+			opIDSet := make(map[string]bool)
 			for i := 0; i < numOps; i++ {
-				ops[i] = *(<-opsBuffer)
+				op := *(<-opsBuffer)
+				if _, exists := opIDSet[op.OpID]; !exists {
+					opIDSet[op.OpID] = true
+					ops = append(ops, op)
+				}
 			}
-			log.Println("Time out for Ops reached, starting block generation...")
-			// TODO: need to be flooded to peers
+
 			block := gen.GenerateBlock(coordinator.blockchain.GetBlockHash(),
 				coordinator.blockchain.Conf.MinerID, ops, coordinator.blockchain.Conf.OpDiffculty,
 				coordinator.blockchain.Conf.NoopDifficulty)
@@ -109,12 +114,17 @@ func (coordinator *Coordinator) opProcessorDaemon(blockBuffer chan<- *domain.Blo
 		default:
 		}
 		if len(opsBuffer) >= coordinator.conf.MaxOpsQueueSize {
-			ops := make([]domain.Op, coordinator.conf.MaxOpsQueueSize)
+			log.Println("[coordinator]: Max queue size for Ops reached, starting block generation...")
+			ops := make([]domain.Op, 0)
+			opIDSet := make(map[string]bool)
 			for i := 0; i < coordinator.conf.MaxOpsQueueSize; i++ {
-				ops[i] = *(<-opsBuffer)
+				op := *(<-opsBuffer)
+				if _, exists := opIDSet[op.OpID]; !exists {
+					opIDSet[op.OpID] = true
+					ops = append(ops, op)
+				}
 			}
-			log.Println("Max queue size for Ops reached, starting block generation...")
-			// TODO: need to be flooded to peers
+
 			block := gen.GenerateBlock(coordinator.blockchain.GetBlockHash(),
 				coordinator.blockchain.Conf.MinerID, ops, coordinator.blockchain.Conf.OpDiffculty,
 				coordinator.blockchain.Conf.NoopDifficulty)
