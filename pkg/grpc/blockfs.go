@@ -17,36 +17,54 @@ import (
 
 // blockfs is the grpc server for service the block file system
 type blockfs struct {
+	conf          BlockFSConf
 	opsProcessing chan<- *domain.Op
+	opsFlooding   chan<- *domain.Op
 	blockchain    *blockchain.Blockchain
+}
+
+type BlockFSConf struct {
+	MinerID       string
+	ConfirmLength int
 }
 
 // CreateFile - handle file create in the blockfs
 func (fs *blockfs) CreateFile(ctx context.Context, req *pb.CreateFileRequest) (*pb.CreateFileResponse, error) {
 	op := &domain.Op{
 		OpID:     guuid.New().String(),
-		MinerID:  "",
+		MinerID:  fs.conf.MinerID,
 		OpAction: domain.OpCREATE,
 		Filename: req.FileName,
 		Record:   make([]byte, 0),
 	}
 	fs.opsProcessing <- op
-	// TODO: should not return until confirmed by peers
+	fs.opsFlooding <- op
+	fs.waitUntilConfirmed(op.OpID)
 	return &pb.CreateFileResponse{
 		Status: &status.Status{Code: int32(codes.OK)},
 	}, nil
 }
 
 // ListFiles - list all files existing in the blockfs
-func (*blockfs) ListFiles(ctx context.Context, req *pb.ListFilesRequest) (*pb.ListFilesResponse, error) {
+func (fs *blockfs) ListFiles(ctx context.Context, req *pb.ListFilesRequest) (*pb.ListFilesResponse, error) {
+	data := fs.blockchain.GetData()
+	files := make([]string, 0)
+	for _, ops := range data {
+		for _, op := range ops {
+			if op.OpAction == domain.OpCREATE {
+				files = append(files, op.Filename)
+			}
+		}
+	}
 	return &pb.ListFilesResponse{
 		Status:    &status.Status{Code: int32(codes.OK)},
-		FileNames: make([]string, 0),
+		FileNames: files,
 	}, nil
 }
 
 // TotalRecs - total number of records in a file
 func (*blockfs) TotalRecs(ctx context.Context, req *pb.TotalRecsRequest) (*pb.TotalRecsResponse, error) {
+	// TODO
 	return &pb.TotalRecsResponse{
 		Status:  &status.Status{Code: int32(codes.OK)},
 		NumRecs: 0,
@@ -55,6 +73,7 @@ func (*blockfs) TotalRecs(ctx context.Context, req *pb.TotalRecsRequest) (*pb.To
 
 // ReadRec - read a specific record in a file
 func (*blockfs) ReadRec(ctx context.Context, req *pb.ReadRecRequest) (*pb.ReadRecResponse, error) {
+	// TODO
 	return &pb.ReadRecResponse{
 		Status: &status.Status{Code: int32(codes.OK)},
 		Record: &pb.Record{Bytes: make([]byte, 0)},
@@ -62,17 +81,48 @@ func (*blockfs) ReadRec(ctx context.Context, req *pb.ReadRecRequest) (*pb.ReadRe
 }
 
 // AppendRec - append a record to a file
-func (*blockfs) AppendRec(ctx context.Context, req *pb.AppendRecRequest) (*pb.AppendRecResponse, error) {
+func (fs *blockfs) AppendRec(ctx context.Context, req *pb.AppendRecRequest) (*pb.AppendRecResponse, error) {
+	op := &domain.Op{
+		OpID:     guuid.New().String(),
+		MinerID:  "",
+		OpAction: domain.OpAPPEND,
+		Filename: req.FileName,
+		Record:   req.Record.Bytes,
+	}
+	fs.opsProcessing <- op
+	fs.opsFlooding <- op
+	fs.waitUntilConfirmed(op.OpID)
 	return &pb.AppendRecResponse{
 		Status:    &status.Status{Code: int32(codes.OK)},
 		RecordNum: 0,
 	}, nil
 }
 
+func (fs *blockfs) waitUntilConfirmed(targetID string) {
+	confirmed := false
+	for !confirmed {
+		// wait until submitted op is confirmed by blockchain
+		chain := fs.blockchain.CloneLongestChain()
+		for {
+			for _, chainOp := range chain.Ops {
+				if chainOp.OpID == targetID && chain.Metadata.LongestChainLength >= uint64(fs.conf.ConfirmLength) {
+					confirmed = true
+				}
+			}
+			if confirmed || len(*chain.Children) == 0 {
+				break
+			}
+			chain = *((*chain.Children)[0])
+		}
+	}
+}
+
 // RegisterBlockFS - registers the blockfs rpc service
-func RegisterBlockFS(s *grpc.Server, opsProcessing chan<- *domain.Op, blockchain *blockchain.Blockchain) {
+func RegisterBlockFS(s *grpc.Server, conf BlockFSConf, opsProcessing chan<- *domain.Op, opsFlooding chan<- *domain.Op, blockchain *blockchain.Blockchain) {
 	pb.RegisterBlockFSServer(s, &blockfs{
+		conf:          conf,
 		opsProcessing: opsProcessing,
 		blockchain:    blockchain,
+		opsFlooding:   opsFlooding,
 	})
 }

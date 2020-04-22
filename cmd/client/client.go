@@ -18,10 +18,11 @@ func main() {
 	defer conn.Close()
 	c := pb.NewBlockFSClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	response, err := c.CreateFile(ctx, &pb.CreateFileRequest{FileName: "abc"})
+	// response, err := c.ListFiles(ctx, &pb.ListFilesRequest{})
 	if err != nil {
 		log.Fatalf("Error when calling CreateFile: %s", err)
 	}

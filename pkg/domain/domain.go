@@ -77,7 +77,7 @@ func (op *Op) String() string {
 	default:
 		actionString = "UNKNOWN"
 	}
-	return fmt.Sprintf("<A: %s, F:%s>", actionString, op.Filename)
+	return fmt.Sprintf("<ID: %s, A: %s, F:%s>", op.OpID[:5], actionString, op.Filename)
 }
 
 // NewOp constructor

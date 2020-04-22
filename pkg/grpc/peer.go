@@ -24,7 +24,6 @@ func (peer *Peer) FloodBlock(stream api.Peer_FloodBlockServer) error {
 			return nil
 		}
 		if err != nil {
-			log.Printf("[peer-grpc]: error occured when receiving block from peer")
 			continue
 		}
 		peer.blocksBuffer <- *request
@@ -43,7 +42,6 @@ func (peer *Peer) FloodOp(stream api.Peer_FloodOpServer) error {
 			return nil
 		}
 		if err != nil {
-			log.Printf("[peer-grpc]: error occured when receiving op from peer")
 			continue
 		}
 		peer.opsBuffer <- *request

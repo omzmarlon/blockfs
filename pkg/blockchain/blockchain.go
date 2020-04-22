@@ -89,7 +89,7 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 					return APPEND_RESULT_DUPLICATE
 				}
 			}
-			// TODO blockfs semantic check before appending
+			// TODO blockfs semantic check before appending and op id de-dup
 			*curr.Children = append(*curr.Children, block)
 			// preserving some metadata to assist faster lookup
 			block.Metadata.Parent = curr
@@ -198,14 +198,76 @@ func (blockchain *Blockchain) GetData() [][]domain.Op {
 		if len(*curr.Children) == 0 {
 			break
 		}
-		curr = (*curr.Children)[0]
-		maxLen := curr.Metadata.LongestChainLength
+		maxLen := uint64(0)
 		for _, child := range *curr.Children {
 			if child.Metadata.LongestChainLength > maxLen {
 				curr = child
+				maxLen = child.Metadata.LongestChainLength
 			}
 		}
 	}
+	return result
+}
+
+// CloneLongestChain returns a copy of the longest chain in local blockchain
+func (blockchain *Blockchain) CloneLongestChain() domain.Block {
+	blockchain.chainRWLock.RLock()
+	defer blockchain.chainRWLock.RUnlock()
+
+	result := domain.Block{
+		Hash:     blockchain.Conf.GenesisHash,
+		PrevHash: "",
+		MinerID:  blockchain.Conf.MinerID,
+		Ops:      make([]domain.Op, 0),
+		Nonce:    0,
+		Metadata: domain.Metadata{
+			LongestChainLength: blockchain.genesis.Metadata.LongestChainLength,
+		},
+	}
+	children := make([]*domain.Block, 0)
+	if len(*blockchain.genesis.Children) == 0 {
+		result.Children = &children
+		return result
+	}
+	child := blockchain.cloneLongestChainHelper(*blockchain.genesis.Children)
+	children = append(children, &child)
+	result.Children = &children
+	return result
+}
+
+func (blockchain *Blockchain) cloneLongestChainHelper(children []*domain.Block) domain.Block {
+	target := children[0]
+	maxLen := uint64(0)
+	for _, child := range children {
+		if child.Metadata.LongestChainLength > maxLen {
+			maxLen = child.Metadata.LongestChainLength
+			target = child
+		}
+	}
+	ops := make([]domain.Op, len(target.Ops))
+	for i := 0; i < len(target.Ops); i++ {
+		ops[i] = domain.NewOp(target.Ops[i].OpID, target.Ops[i].MinerID,
+			target.Ops[i].OpAction, target.Ops[i].Filename, target.Ops[i].Record)
+	}
+	result := domain.Block{
+		Hash:     target.Hash,
+		PrevHash: target.PrevHash,
+		MinerID:  target.MinerID,
+		Ops:      ops,
+		Nonce:    target.Nonce,
+		Metadata: domain.Metadata{
+			LongestChainLength: target.Metadata.LongestChainLength,
+		},
+	}
+
+	cloned := make([]*domain.Block, 0)
+	if len(*target.Children) == 0 {
+		result.Children = &cloned
+		return result
+	}
+	child := blockchain.cloneLongestChainHelper(*target.Children)
+	cloned = append(cloned, &child)
+	result.Children = &cloned
 	return result
 }
 

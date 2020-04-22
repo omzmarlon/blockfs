@@ -70,6 +70,9 @@ func main() {
 	}
 	log.Println("Starting BlockFS rpc service... ")
 	s := grpc.NewServer()
-	rpc.RegisterBlockFS(s, opsProcessing, bc)
+	rpc.RegisterBlockFS(s, rpc.BlockFSConf{
+		MinerID:       minerConfig.MinerID,
+		ConfirmLength: 5,
+	}, opsProcessing, opsFlooding, bc)
 	s.Serve(lis)
 }
