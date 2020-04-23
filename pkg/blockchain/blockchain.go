@@ -73,6 +73,9 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 	if !blockchain.verifyBlock(block) {
 		return APPEND_RESULT_INVALID_BLOCK
 	}
+	if !blockchain.verifySemantics(block) {
+		return APPEND_RESULT_INVALID_SEMANTIC
+	}
 	blockchain.preprocessBlockMetadata(block)
 	q := queue.New(10)
 	q.Put(blockchain.genesis)
@@ -103,6 +106,41 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 
 	}
 	return APPEND_RESULT_NOT_FOUND
+}
+
+func (blockchain *Blockchain) verifySemantics(block *domain.Block) bool {
+	newOpIDs := make(map[string]bool)
+	newFiles := make(map[string]bool)
+	for _, op := range block.Ops {
+		newOpIDs[op.OpID] = true
+		if op.OpAction == domain.OpCREATE {
+			newFiles[op.Filename] = true
+		}
+	}
+	curr := blockchain.genesis
+	for {
+		for _, op := range curr.Ops {
+			if _, exists := newOpIDs[op.OpID]; exists {
+				return false
+			}
+			if _, exists := newFiles[op.Filename]; exists {
+				return false
+			}
+		}
+		if len(*curr.Children) == 0 {
+			break
+		} else {
+			curr = (*curr.Children)[0]
+			maxLen := uint64(0)
+			for _, child := range *curr.Children {
+				if child.Metadata.LongestChainLength > maxLen {
+					maxLen = child.Metadata.LongestChainLength
+					curr = child
+				}
+			}
+		}
+	}
+	return true
 }
 
 func (blockchain *Blockchain) updateParentsMetaHelper(start *domain.Block, subChainLen uint64) {
