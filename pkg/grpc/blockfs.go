@@ -63,19 +63,42 @@ func (fs *blockfs) ListFiles(ctx context.Context, req *pb.ListFilesRequest) (*pb
 }
 
 // TotalRecs - total number of records in a file
-func (*blockfs) TotalRecs(ctx context.Context, req *pb.TotalRecsRequest) (*pb.TotalRecsResponse, error) {
-	// TODO
+func (fs *blockfs) TotalRecs(ctx context.Context, req *pb.TotalRecsRequest) (*pb.TotalRecsResponse, error) {
+	count := uint32(0)
+	data := fs.blockchain.GetData()
+	for _, ops := range data {
+		for _, op := range ops {
+			if op.Filename == req.FileName && op.OpAction == domain.OpAPPEND {
+				count++
+			}
+		}
+	}
 	return &pb.TotalRecsResponse{
 		Status:  &status.Status{Code: int32(codes.OK)},
-		NumRecs: 0,
+		NumRecs: count,
 	}, nil
 }
 
 // ReadRec - read a specific record in a file
-func (*blockfs) ReadRec(ctx context.Context, req *pb.ReadRecRequest) (*pb.ReadRecResponse, error) {
-	// TODO
+func (fs *blockfs) ReadRec(ctx context.Context, req *pb.ReadRecRequest) (*pb.ReadRecResponse, error) {
+	data := fs.blockchain.GetData()
+	index := uint32(0)
+	for _, ops := range data {
+		for _, op := range ops {
+			if op.Filename == req.FileName && op.OpAction == domain.OpAPPEND {
+				if index == req.RecordNum {
+					return &pb.ReadRecResponse{
+						Status: &status.Status{Code: int32(codes.OK)},
+						Record: &pb.Record{Bytes: op.Record},
+					}, nil
+				} else {
+					index++
+				}
+			}
+		}
+	}
 	return &pb.ReadRecResponse{
-		Status: &status.Status{Code: int32(codes.OK)},
+		Status: &status.Status{Code: int32(codes.NotFound)},
 		Record: &pb.Record{Bytes: make([]byte, 0)},
 	}, nil
 }
