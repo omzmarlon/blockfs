@@ -29,6 +29,15 @@ func main() {
 	log.Printf("Response from server: %s", response)
 	log.Printf("Response from server: %d", response.Status.Code)
 
+	// ----- create same file on purpose ---
+	response, err = c.CreateFile(ctx, &pb.CreateFileRequest{FileName: fileName})
+	if err != nil {
+		log.Fatalf("Error when calling CreateFile: %s", err)
+	}
+	log.Printf("Response from server: %s", response)
+	log.Printf("Response from server: %d", response.Status.Code)
+	// ------------------------------------
+
 	listResult, err := c.ListFiles(ctx, &pb.ListFilesRequest{})
 	if err != nil {
 		log.Fatalf("Error when calling ListFile: %s", err)

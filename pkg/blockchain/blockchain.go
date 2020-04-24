@@ -12,8 +12,6 @@ import (
 
 // TODO:
 // also need coin count
-// this class performs the block legitimacy check
-// ideally do not run any daemon in this class, it is just a data structure to be changed by other class's daemons
 
 // Blockchain - the blockchain hold on this miner
 type Blockchain struct {
@@ -73,7 +71,7 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 	if !blockchain.verifyBlock(block) {
 		return APPEND_RESULT_INVALID_BLOCK
 	}
-	if !blockchain.verifySemantics(block) {
+	if !blockchain.verifySemanticsHelper(block.Ops) {
 		return APPEND_RESULT_INVALID_SEMANTIC
 	}
 	blockchain.preprocessBlockMetadata(block)
@@ -92,7 +90,6 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 					return APPEND_RESULT_DUPLICATE
 				}
 			}
-			// TODO blockfs semantic check before appending and op id de-dup
 			*curr.Children = append(*curr.Children, block)
 			// preserving some metadata to assist faster lookup
 			block.Metadata.Parent = curr
@@ -108,16 +105,23 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 	return APPEND_RESULT_NOT_FOUND
 }
 
-func (blockchain *Blockchain) verifySemantics(block *domain.Block) bool {
+func (blockchain *Blockchain) VerifySemantics(newOps []domain.Op) bool {
+	blockchain.chainRWLock.RLock()
+	defer blockchain.chainRWLock.RUnlock()
+	return blockchain.verifySemanticsHelper(newOps)
+}
+
+func (blockchain *Blockchain) verifySemanticsHelper(newOps []domain.Op) bool {
 	newOpIDs := make(map[string]bool)
 	newFiles := make(map[string]bool)
-	for _, op := range block.Ops {
+	for _, op := range newOps {
 		newOpIDs[op.OpID] = true
 		if op.OpAction == domain.OpCREATE {
 			newFiles[op.Filename] = true
 		}
 	}
 	curr := blockchain.genesis
+	existingFiles := make(map[string]bool)
 	for {
 		for _, op := range curr.Ops {
 			if _, exists := newOpIDs[op.OpID]; exists {
@@ -126,6 +130,7 @@ func (blockchain *Blockchain) verifySemantics(block *domain.Block) bool {
 			if _, exists := newFiles[op.Filename]; exists {
 				return false
 			}
+			existingFiles[op.Filename] = true
 		}
 		if len(*curr.Children) == 0 {
 			break
@@ -137,6 +142,13 @@ func (blockchain *Blockchain) verifySemantics(block *domain.Block) bool {
 					maxLen = child.Metadata.LongestChainLength
 					curr = child
 				}
+			}
+		}
+	}
+	for _, op := range newOps {
+		if op.OpAction == domain.OpAPPEND {
+			if _, exists := existingFiles[op.Filename]; !exists {
+				return false
 			}
 		}
 	}

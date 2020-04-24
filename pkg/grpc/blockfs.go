@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"time"
 
 	guuid "github.com/google/uuid"
 	pb "github.com/omzmarlon/blockfs/pkg/api"
@@ -36,6 +37,14 @@ func (fs *blockfs) CreateFile(ctx context.Context, req *pb.CreateFileRequest) (*
 		OpAction: domain.OpCREATE,
 		Filename: req.FileName,
 		Record:   make([]byte, 0),
+	}
+	if !fs.blockchain.VerifySemantics([]domain.Op{*op}) {
+		return &pb.CreateFileResponse{
+			Status: &status.Status{
+				Code:    int32(codes.InvalidArgument),
+				Message: "Failed semantics check",
+			},
+		}, nil
 	}
 	fs.opsProcessing <- op
 	fs.opsFlooding <- op
@@ -112,6 +121,15 @@ func (fs *blockfs) AppendRec(ctx context.Context, req *pb.AppendRecRequest) (*pb
 		Filename: req.FileName,
 		Record:   req.Record.Bytes,
 	}
+	if !fs.blockchain.VerifySemantics([]domain.Op{*op}) {
+		return &pb.AppendRecResponse{
+			Status: &status.Status{
+				Code:    int32(codes.InvalidArgument),
+				Message: "Failed semantics check",
+			},
+			RecordNum: 0,
+		}, nil
+	}
 	fs.opsProcessing <- op
 	fs.opsFlooding <- op
 	fs.waitUntilConfirmed(op.OpID)
@@ -125,6 +143,7 @@ func (fs *blockfs) waitUntilConfirmed(targetID string) {
 	confirmed := false
 	for !confirmed {
 		// wait until submitted op is confirmed by blockchain
+		time.Sleep(1000 * time.Millisecond)
 		chain := fs.blockchain.CloneLongestChain()
 		for {
 			for _, chainOp := range chain.Ops {
