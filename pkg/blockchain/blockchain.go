@@ -135,7 +135,6 @@ func (blockchain *Blockchain) verifySemanticsHelper(newOps []domain.Op) bool {
 		if len(*curr.Children) == 0 {
 			break
 		} else {
-			curr = (*curr.Children)[0]
 			maxLen := uint64(0)
 			for _, child := range *curr.Children {
 				if child.Metadata.LongestChainLength > maxLen {
