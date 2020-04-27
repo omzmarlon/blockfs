@@ -18,7 +18,7 @@ type Block struct {
 	Metadata Metadata
 }
 
-// Metadata attached to each block to assit faster look up
+// Metadata attached to each block to assit processing
 type Metadata struct {
 	LongestChainLength uint64
 	Parent             *Block

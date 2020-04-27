@@ -94,7 +94,7 @@ func (blockchain *Blockchain) AppendBlock(block *domain.Block) AppendBlockResult
 			// preserving some metadata to assist faster lookup
 			block.Metadata.Parent = curr
 			blockchain.updateParentsMetaHelper(block.Metadata.Parent, uint64(block.Metadata.LongestChainLength))
-			blockchain.PrintBlockchain()
+			blockchain.printBlockchain()
 			return APPEND_RESULT_SUCCESS
 		}
 		for _, child := range *curr.Children {
@@ -371,7 +371,7 @@ func (blockchain *Blockchain) getBlockHashHelper(block *domain.Block, currDepth 
 	return max, maxhash
 }
 
-func (blockchain *Blockchain) PrintBlockchain() {
+func (blockchain *Blockchain) printBlockchain() {
 	fmt.Println("Printing blockchain...")
 	defer fmt.Println("Printing blockchain done...")
 	q := queue.New(10)
