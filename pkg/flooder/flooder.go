@@ -64,7 +64,6 @@ func (flooder *Flooder) StartFlooderDaemons(blockProcessing chan<- *domain.Block
 	blocksReqFloodBuffer := make(chan api.FloodBlockRequest, flooder.conf.PeerBlocksFloodBufferSize)
 	// a channel for buffering ops flooded from peers
 	opsReqFloodBuffer := make(chan api.FloodOpRequest, flooder.conf.PeerOpsFloodBufferSize)
-	// TODO function too long, don't use anonymous func here
 	// kick off daemon for the grpc service to accept flooding requests from peers
 	go func() {
 		lis, err := net.Listen("tcp", flooder.conf.Address)

@@ -13,9 +13,7 @@ import (
 	codes "google.golang.org/grpc/codes"
 )
 
-// TODO:
 // - actual implentation of the blockfs service
-
 // blockfs is the grpc server for service the block file system
 type blockfs struct {
 	conf          BlockFSConf

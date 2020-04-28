@@ -17,7 +17,7 @@ func ComputeBlockHash(block domain.Block) string {
 	return hex.EncodeToString(md5Hasher.Sum(nil))
 }
 
-// TODO: test this
+// IsDifficultyReached - check if the hash reaches desired difficulty
 func IsDifficultyReached(hash string, difficulty int) bool {
 	if hash[len(hash)-int(difficulty):] == targetZeros(difficulty) {
 		return true

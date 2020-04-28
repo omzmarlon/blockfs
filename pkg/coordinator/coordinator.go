@@ -19,7 +19,6 @@ type Coordinator struct {
 
 // Conf - configurations for various queues
 type Conf struct {
-	// TODO: rename queue to channel buffer
 	MaxOpsQueueSize        int // exceeding this size, the ops in the queue should be packed into a block
 	RetryBlockQueueMaxSize int
 	WaitOpsTimeoutMilli    int // timeout for waiting for enough ops to generate a new block

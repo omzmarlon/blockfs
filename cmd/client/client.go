@@ -9,6 +9,7 @@ import (
 
 	pb "github.com/omzmarlon/blockfs/pkg/api"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 func main() {
@@ -41,8 +42,11 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error when calling CreateFile: %s\n", err)
 		}
-		fmt.Printf("Response from server: %s", response)
-		fmt.Printf("Response from server: %d", response.Status.Code)
+		status := codes.Code(response.Status.Code)
+		fmt.Printf("Status: %s\n", codeToString(status))
+		if status != codes.OK {
+			fmt.Printf("Response from server: %s", response.Status.Message)
+		}
 		return
 	case "append":
 		if len(tailArgs) != 2 {
@@ -55,16 +59,27 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error when calling AppendRec: %s\n", err)
 		}
-		fmt.Printf("AppendRec Response from server: %s\n", appendRes)
-		fmt.Printf("Response from server: %d\n", appendRes.Status.Code)
+		status := codes.Code(appendRes.Status.Code)
+		fmt.Printf("Status: %s\n", codeToString(status))
+		if status != codes.OK {
+			fmt.Printf("Response from server: %s", appendRes.Status.Message)
+		}
 		return
 	case "list":
 		listResult, err := c.ListFiles(ctx, &pb.ListFilesRequest{})
 		if err != nil {
 			fmt.Printf("Error when calling ListFile: %s", err)
 		}
-		fmt.Printf("ListFiles Response from server: %s\n", listResult)
-		fmt.Printf("Response from server: %d\n", listResult.Status.Code)
+		status := codes.Code(listResult.Status.Code)
+		fmt.Printf("Status: %s\n", codeToString(status))
+		if status == codes.OK {
+			for _, filename := range listResult.FileNames {
+				fmt.Printf("%s, ", filename)
+			}
+			fmt.Printf("\n")
+		} else {
+			fmt.Printf("Response from server: %s", listResult.Status.Message)
+		}
 		return
 	case "read":
 		if len(tailArgs) != 2 {
@@ -77,8 +92,13 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error when calling ReadRec: %s", err)
 		}
-		fmt.Printf("TotalRecs Response from server: %s", readRec)
-		fmt.Printf("Response from server: %d", readRec.Status.Code)
+		status := codes.Code(readRec.Status.Code)
+		fmt.Printf("Status: %s\n", codeToString(status))
+		if status == codes.OK {
+			fmt.Printf("%s\n", string(readRec.GetRecord().GetBytes()))
+		} else {
+			fmt.Printf("Response from server: %s", readRec.Status.Message)
+		}
 	// case "read_all":
 	// TODO
 	case "total_recs":
@@ -92,12 +112,30 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error when calling TotalRecs: %s", err)
 		}
-		fmt.Printf("TotalRecs Response from server: %s", totalRecRes)
-		fmt.Printf("Response from server: %d", totalRecRes.Status.Code)
+		status := codes.Code(totalRecRes.Status.Code)
+		fmt.Printf("Status: %s\n", codeToString(status))
+		if status == codes.OK {
+			fmt.Printf("Total number of records: %d\n", totalRecRes.GetNumRecs())
+		} else {
+			fmt.Printf("Response from server: %s", totalRecRes.Status.Message)
+		}
 		return
 	default:
 		fmt.Printf("Unknown command: %s\n", *cmd)
 		return
 	}
 
+}
+
+func codeToString(code codes.Code) string {
+	switch code {
+	case codes.OK:
+		return "OK"
+	case codes.NotFound:
+		return "NOT_FOUND"
+	case codes.InvalidArgument:
+		return "INVALID_ARGUMENT"
+	default:
+		return fmt.Sprintf("%d", code)
+	}
 }
