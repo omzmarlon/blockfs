@@ -6,6 +6,7 @@ to build a blockchain to reach distributed consensus on the content of the file 
 
 ## How to run miners
 `go run cmd/miner/miner.go -c [path-to-miner-config-json]`
+
 There are sample miner configs in `/configs`
 If you run miner 1 to 3 one by one, they will form a very simple topology:
 
