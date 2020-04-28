@@ -5,7 +5,7 @@ Clients connect to miners to submit file system operations, miners work together
 to build a blockchain to reach distributed consensus on the content of the file system.
 
 ## How to run miners
-go run cmd/miner/miner.go -c [path-to-miner-config-json]  
+`go run cmd/miner/miner.go -c [path-to-miner-config-json]`
 There are sample miner configs in `/configs`
 If you run miner 1 to 3 one by one, they will form a very simple topology:
 
@@ -28,7 +28,7 @@ If you run miner 1 to 3 one by one, they will form a very simple topology:
 ```
 
 ## How to run client
-go run cmd/client/client.go -miner=[miner IP:Port address] -cmd=[create|append|list|read|total_recs] [arg0] [arg1]
+`go run cmd/client/client.go -miner=[miner IP:Port address] -cmd=[create|append|list|read|total_recs] [arg0] [arg1]`
 
 Examples:
 ```
