@@ -1,57 +1,40 @@
 # BlockFS
-*WIP*
+A distributed record file system built on top of blockchain. 
 
-A distributed record file system built on top of blockchain
-
-
+Clients connect to miners to submit file system operations, miners work together 
+to build a blockchain to reach distributed consensus on the content of the file system.
 
 ## How to run miners
-go run miner/main.go [path-to-miner-config-json]  
-There are sample miner configs in miner/configs  
-If you run miner 1 to 6 one by one, they will form a network topology that looks like:
+go run cmd/miner/miner.go -c [path-to-miner-config-json]  
+There are sample miner configs in `/configs`
+If you run miner 1 to 3 one by one, they will form a very simple topology:
 
 ```
 --------
 |Miner2|
 --------
-         \
-          \
-           --------           --------          --------          --------
-           |Miner1|   -----   |Miner6|  -----   |Miner5|  -----   |Miner4|
-           --------           --------          --------          --------
-          /
-         /
+|        \
+|         \
+|          \
+|           --------
+|           |Miner1|
+|           --------
+|          /
+|         /
+|        /
 --------
 |Miner3|
 --------
 ```
-Note that Miner6 connect two subnets (Subnet Miner1-2-3 and subnet Miner-4-5) if it joins last.
-
 
 ## How to run client
-go run client/main.go -c [path-to-miner-config-json] [cmds and args]
+go run cmd/client/client.go -miner=[miner IP:Port address] -cmd=[create|append|list|read|total_recs] [arg0] [arg1]
 
-Available commands:
-* touch
-
-   go run client/main.go -c client/configs/client.json touch fileA  
-
-* append
-
-   go run client/main.go -c client/configs/client.json append fileA record1  
-
-* ls
-
-   go run client/main.go -c client/configs/client.json ls  
-
-* cat
-
-   go run client/main.go -c client/configs/client.json cat fileA  
-
-* head
-
-   go run client/main.go -c client/configs/client.json head fileA 5  
-
-* tail
-
-   go run client/main.go -c client/configs/client.json tail fileA 5  
+Examples:
+```
+go run cmd/client/client.go -miner=127.0.0.1:3000 -cmd=create file0
+go run cmd/client/client.go -miner=127.0.0.1:3000 -cmd=append file0 hello_world
+go run cmd/client/client.go -miner=127.0.0.1:3000 -cmd=list
+go run cmd/client/client.go -miner=127.0.0.1:3000 -cmd=total_recs file0
+go run cmd/client/client.go -miner=127.0.0.1:3000 -cmd=read file0 0
+```
